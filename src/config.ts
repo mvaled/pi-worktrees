@@ -1,19 +1,12 @@
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
-import nconf from 'nconf';
 import { homedir } from 'os';
 import path from 'path';
+import { createConfigService } from 'pi-extension-config';
 import { Object as TypeObject, Optional, Static, String as TypeString } from 'typebox';
 import { Parse } from 'typebox/value';
 
 const APP_NAME = 'pi-worktrees';
-const ENV_PREFIX = `${APP_NAME.toUpperCase().replace(/-/g, '_')}_`;
 
-export const SETTINGS_FILE_PATH = path.join(
-  homedir(),
-  '.pi',
-  'agent',
-  'pi-worktrees-settings.json'
-);
+export const SETTINGS_FILE_PATH = path.join(homedir(), '.pi', 'agent', `${APP_NAME}.config.json`);
 
 const WorktreeSettingsSchema = TypeObject(
   {
@@ -55,18 +48,6 @@ const ResolvedConfigSchema = TypeObject(
 
 export type ResolvedConfig = Static<typeof ResolvedConfigSchema>;
 
-nconf
-  .env({
-    separator: '__',
-    match: new RegExp(`^${ENV_PREFIX}`),
-  })
-  .file({
-    file: SETTINGS_FILE_PATH,
-  })
-  .defaults({
-    worktree: {},
-  });
-
 function buildWorktreeSettings(config: UnresolvedConfig): WorktreeSettingsConfig {
   const nested = config.worktree || {};
   const parentDir = nested.parentDir ?? config.parentDir;
@@ -93,30 +74,30 @@ export function normalizeConfig(value: unknown): ResolvedConfig {
   });
 }
 
-function readConfig(): ResolvedConfig {
-  return normalizeConfig(nconf.get());
-}
+const configService = await createConfigService<ResolvedConfig>(APP_NAME, {
+  defaults: {
+    worktree: {},
+  },
+  parse: normalizeConfig,
+});
 
-export let Config: ResolvedConfig = readConfig();
+export let Config: ResolvedConfig = configService.config;
 
 export function getWorktreeSettings(): WorktreeSettingsConfig {
   return Config.worktree;
 }
 
-export function saveWorktreeSettings(worktreeSettings: WorktreeSettingsConfig): ResolvedConfig {
+export async function saveWorktreeSettings(
+  worktreeSettings: WorktreeSettingsConfig
+): Promise<ResolvedConfig> {
   const normalized = normalizeConfig({
     worktree: worktreeSettings,
   });
 
-  const settingsDir = path.dirname(SETTINGS_FILE_PATH);
-  if (!existsSync(settingsDir)) {
-    mkdirSync(settingsDir, { recursive: true });
-  }
+  await configService.set('worktree', normalized.worktree, 'home');
+  await configService.save('home');
 
-  writeFileSync(SETTINGS_FILE_PATH, JSON.stringify(normalized, null, 2) + '\n', 'utf-8');
-
-  nconf.load();
-  Config = readConfig();
+  Config = configService.config;
 
   return Config;
 }
@@ -124,8 +105,8 @@ export function saveWorktreeSettings(worktreeSettings: WorktreeSettingsConfig): 
 /*
  * Reload values from env + config file and return the normalized config snapshot.
  */
-export function reloadConfig(): ResolvedConfig {
-  nconf.load();
-  Config = readConfig();
+export async function reloadConfig(): Promise<ResolvedConfig> {
+  await configService.reload();
+  Config = configService.config;
   return Config;
 }

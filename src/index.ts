@@ -12,7 +12,7 @@
  *   /worktree cd <name>               - Print path to worktree
  *   /worktree prune                   - Clean up stale worktree references
  *
- * Configuration (~/.pi/agent/pi-worktrees-settings.json):
+ * Configuration (~/.pi/agent/pi-worktrees.config.json):
  *   {
  *     "worktree": {
  *       "parentDir": "~/.local/share/worktrees/{{project}}",  // optional
@@ -83,7 +83,7 @@ Settings:
   /worktree settings onCreate      Get onCreate value  
   /worktree settings onCreate ""   Clear onCreate value
 
-Configuration (~/.pi/agent/pi-worktrees-settings.json):
+Configuration (~/.pi/agent/pi-worktrees.config.json):
   {
     "worktree": {
       "parentDir": "...",        // Override default parent directory
@@ -237,16 +237,17 @@ function getSettingsPath(): string {
 }
 
 /**
- * Load worktree settings from ~/.pi/agent/pi-worktrees-settings.json + env overrides
+ * Load worktree settings from ~/.pi/agent/pi-worktrees.config.json + env overrides
  */
-function loadSettings(): WorktreeSettings {
-  return reloadConfig().worktree;
+async function loadSettings(): Promise<WorktreeSettings> {
+  const config = await reloadConfig();
+  return config.worktree;
 }
 
 /**
- * Save worktree settings to ~/.pi/agent/pi-worktrees-settings.json
+ * Save worktree settings to ~/.pi/agent/pi-worktrees.config.json
  */
-function saveSettings(worktreeSettings: WorktreeSettings): void {
+async function saveSettings(worktreeSettings: WorktreeSettings): Promise<void> {
   const persistable: WorktreeSettingsConfig = {};
 
   if (worktreeSettings.parentDir !== undefined) {
@@ -257,7 +258,7 @@ function saveSettings(worktreeSettings: WorktreeSettings): void {
     persistable.onCreate = worktreeSettings.onCreate;
   }
 
-  saveWorktreeSettings(persistable);
+  await saveWorktreeSettings(persistable);
 }
 
 /**
@@ -419,7 +420,7 @@ async function handleInit(_args: string, ctx: ExtensionCommandContext): Promise<
     return;
   }
 
-  const currentSettings = loadSettings();
+  const currentSettings = await loadSettings();
   const settingsPath = getSettingsPath();
 
   ctx.ui.notify('Worktree Extension Setup\n━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
@@ -520,7 +521,7 @@ async function handleInit(_args: string, ctx: ExtensionCommandContext): Promise<
 
   // Save settings
   try {
-    saveSettings(newSettings);
+    await saveSettings(newSettings);
     ctx.ui.notify(`✓ Settings saved to ${settingsPath}`, 'info');
 
     // Show final config
@@ -535,7 +536,7 @@ const VALID_SETTING_KEYS = ['parentDir', 'onCreate'] as const;
 type SettingKey = (typeof VALID_SETTING_KEYS)[number];
 
 async function handleSettings(args: string, ctx: ExtensionCommandContext): Promise<void> {
-  const currentSettings = loadSettings();
+  const currentSettings = await loadSettings();
   const settingsPath = getSettingsPath();
 
   // Parse args - handle quoted values
@@ -599,7 +600,7 @@ async function handleSettings(args: string, ctx: ExtensionCommandContext): Promi
   }
 
   try {
-    saveSettings(newSettings);
+    await saveSettings(newSettings);
   } catch (err) {
     ctx.ui.notify(`Failed to save settings: ${(err as Error).message}`, 'error');
   }
@@ -617,7 +618,7 @@ async function handleCreate(args: string, ctx: ExtensionCommandContext): Promise
     return;
   }
 
-  const settings = loadSettings();
+  const settings = await loadSettings();
   const project = getProjectName(ctx.cwd);
   const mainWorktree = getMainWorktreePath(ctx.cwd);
   const parentDir = getWorktreeParentDir(ctx.cwd, settings);
@@ -704,7 +705,7 @@ async function handleRemove(args: string, ctx: ExtensionCommandContext): Promise
   }
 
   const worktrees = listWorktrees(ctx.cwd);
-  const settings = loadSettings();
+  const settings = await loadSettings();
   const parentDir = getWorktreeParentDir(ctx.cwd, settings);
 
   // Find worktree by name (check both path basename and full path)
@@ -799,7 +800,7 @@ async function handleCd(args: string, ctx: ExtensionCommandContext): Promise<voi
   }
 
   const worktrees = listWorktrees(ctx.cwd);
-  const settings = loadSettings();
+  const settings = await loadSettings();
   const parentDir = getWorktreeParentDir(ctx.cwd, settings);
 
   if (!worktreeName) {
