@@ -1,8 +1,8 @@
-import { homedir } from 'os';
-import path from 'path';
-import { createConfigService } from 'pi-extension-config';
+import { createConfigService, type ConfigService } from '@zenobius/pi-extension-config';
 import { Object as TypeObject, Optional, Static, String as TypeString } from 'typebox';
 import { Parse } from 'typebox/value';
+import { homedir } from 'os';
+import path from 'path';
 
 const APP_NAME = 'pi-worktrees';
 
@@ -47,6 +47,7 @@ const ResolvedConfigSchema = TypeObject(
 );
 
 export type ResolvedConfig = Static<typeof ResolvedConfigSchema>;
+export type WorktreeConfigService = ConfigService<ResolvedConfig>;
 
 function buildWorktreeSettings(config: UnresolvedConfig): WorktreeSettingsConfig {
   const nested = config.worktree || {};
@@ -74,39 +75,29 @@ export function normalizeConfig(value: unknown): ResolvedConfig {
   });
 }
 
-const configService = await createConfigService<ResolvedConfig>(APP_NAME, {
-  defaults: {
-    worktree: {},
-  },
-  parse: normalizeConfig,
-});
-
-export let Config: ResolvedConfig = configService.config;
-
-export function getWorktreeSettings(): WorktreeSettingsConfig {
-  return Config.worktree;
+export async function createWorktreeConfigService(): Promise<WorktreeConfigService> {
+  return createConfigService<ResolvedConfig>(APP_NAME, {
+    defaults: {
+      worktree: {},
+    },
+    parse: normalizeConfig,
+  });
 }
 
 export async function saveWorktreeSettings(
+  configService: WorktreeConfigService,
   worktreeSettings: WorktreeSettingsConfig
-): Promise<ResolvedConfig> {
-  const normalized = normalizeConfig({
-    worktree: worktreeSettings,
-  });
+): Promise<void> {
+  const persistable: WorktreeSettingsConfig = {};
 
-  await configService.set('worktree', normalized.worktree, 'home');
+  if (worktreeSettings.parentDir !== undefined) {
+    persistable.parentDir = worktreeSettings.parentDir;
+  }
+
+  if (typeof worktreeSettings.onCreate === 'string') {
+    persistable.onCreate = worktreeSettings.onCreate;
+  }
+
+  await configService.set('worktree', persistable, 'home');
   await configService.save('home');
-
-  Config = configService.config;
-
-  return Config;
-}
-
-/*
- * Reload values from env + config file and return the normalized config snapshot.
- */
-export async function reloadConfig(): Promise<ResolvedConfig> {
-  await configService.reload();
-  Config = configService.config;
-  return Config;
 }
