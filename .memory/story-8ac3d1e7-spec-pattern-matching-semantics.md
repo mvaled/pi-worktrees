@@ -2,7 +2,7 @@
 id: 8ac3d1e7
 title: spec-pattern-matching-semantics
 created_at: 2026-03-12T00:00:00+10:30
-updated_at: 2026-03-12T23:03:00+10:30
+updated_at: 2026-03-12T23:12:00+10:30
 status: completed
 epic_id: a7c9d4f2
 priority: high
@@ -16,8 +16,8 @@ test_coverage: full
 As a maintainer, I want deterministic pattern-matching semantics so that each repository resolves to the expected worktree settings without ambiguity.
 
 ## Acceptance Criteria
-- [x] Glob pattern behavior is defined (not just `*`; includes supported glob tokens and matching rules).
-- [x] Match target normalization is defined (canonical repo identifier).
+- [x] Glob pattern behavior is defined using minimatch semantics (full minimatch feature set).
+- [x] Match target is defined as the full git remote URL.
 - [x] Precedence is defined: exact > most specific glob > declaration order.
 - [x] No-match fallback behavior is defined.
 - [x] `onCreate` string/array normalization and execution rules are defined.
@@ -47,8 +47,9 @@ Without a clear spec, matcher behavior risks becoming implementation-defined and
 
 ## Notes
 Specification captured:
-- Patterns use glob semantics (not star-only), with documented supported tokens and match behavior.
-- Matching target is canonical host/owner/repo identifier.
-- Deterministic precedence and tie-break behavior (exact > most specific glob > declaration order).
+- Patterns use minimatch glob semantics (including behavior and options minimatch supports).
+- Case-sensitivity and path-separator behavior follow minimatch defaults/support.
+- Matching target is the full git remote URL.
+- Deterministic precedence intent is exact > most specific glob; tie handling is currently unresolved and now tracked for explicit UX behavior.
 - Fallback to legacy singular `worktree` when no `worktrees` pattern matches.
 - Runtime normalization of `onCreate` to ordered command list.

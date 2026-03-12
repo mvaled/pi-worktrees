@@ -2,7 +2,7 @@
 id: e7b6a902
 title: add-matching-tests
 created_at: 2026-03-12T00:00:00+10:30
-updated_at: 2026-03-12T22:50:00+10:30
+updated_at: 2026-03-12T23:10:00+10:30
 status: in-progress
 epic_id: a7c9d4f2
 priority: high
@@ -19,7 +19,8 @@ As a maintainer, I want automated tests for matching and fallback behavior so th
 - [x] Tests verify exact match vs wildcard precedence.
 - [x] Tests verify no-match fallback behavior.
 - [x] Tests verify `onCreate` list handling.
-- [ ] Command-level integration tests verify end-to-end settings resolution.
+- [ ] Command-level integration tests verify precedence + fallback + `onCreate` execution order and failure-stop behavior.
+- [ ] Integration coverage is added in both config-service and command-level test suites.
 
 ## Context
 This story provides confidence around deterministic behavior under future changes.
@@ -37,7 +38,8 @@ This story provides confidence around deterministic behavior under future change
 | AC1 | Exact vs wildcard precedence | Planned command resolver integration suite | not-implemented |
 | AC2 | No-match fallback | Planned command resolver integration suite | not-implemented |
 | AC3 | onCreate list handling | Planned command resolver integration suite | not-implemented |
-| AC4 | End-to-end command-level resolution | Planned command resolver integration suite | not-implemented |
+| AC4 | onCreate execution order and failure-stop | Planned command resolver integration suite | not-implemented |
+| AC5 | Integration coverage in config + command suites | Planned cross-suite integration checks | not-implemented |
 
 ### Unit Test Coverage (via Tasks)
 - Existing matching/config unit tests are referenced in implementation notes; integration coverage remains open.

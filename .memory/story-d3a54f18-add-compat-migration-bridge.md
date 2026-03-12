@@ -2,7 +2,7 @@
 id: d3a54f18
 title: add-compat-migration-bridge
 created_at: 2026-03-12T00:00:00+10:30
-updated_at: 2026-03-12T22:57:00+10:30
+updated_at: 2026-03-12T23:10:00+10:30
 status: in-progress
 epic_id: a7c9d4f2
 priority: high
@@ -19,14 +19,16 @@ As an existing user, I want old single-worktree config to keep working while new
 - [x] Legacy `worktree` shape is accepted.
 - [x] Legacy flat fields continue to parse.
 - [x] Resolver falls back to legacy settings when no pattern matches.
-- [x] Migration behavior is documented.
+- [ ] Migration from legacy to new shape is executed by `pi-extension-config`.
+- [ ] A migration set is authored and versioned for this transition.
+- [ ] Deprecation behavior follows migration policy from `pi-extension-config` (timeline to be defined there).
 - [ ] Story-level E2E verification is linked and passing for all criteria.
 
 ## Context
 Backward compatibility is required to avoid disrupting existing workflows.
 
 ## Out of Scope
-- Automatic file rewrite migration tooling.
+- Ad-hoc migration logic outside the shared `pi-extension-config` migration mechanism.
 
 ## Tasks
 - No task files created for this story in memory.
@@ -38,10 +40,12 @@ Backward compatibility is required to avoid disrupting existing workflows.
 | AC1 | Legacy worktree shape accepted | Planned legacy config integration test | not-implemented |
 | AC2 | Legacy flat fields accepted | Planned legacy config integration test | not-implemented |
 | AC3 | Fallback to legacy on no match | Planned fallback integration test | not-implemented |
-| AC4 | Migration documented | README migration checklist review | passing |
+| AC4 | Migration via pi-extension-config runs | Planned migration integration test | not-implemented |
+| AC5 | Migration set present and versioned | Planned migration-set verification test | not-implemented |
+| AC6 | Deprecation policy matches migration framework | Planned migration-policy verification | not-implemented |
 
 ### Unit Test Coverage (via Tasks)
 - Unit test mappings are not yet represented via task files in memory.
 
 ## Notes
-Compatibility behaviors are intentionally preserved during transition period.
+Compatibility behavior should converge on shared migration infra, not extension-local bespoke scripts.

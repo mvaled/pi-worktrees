@@ -7,6 +7,5 @@
 - Owner: unknown-session
 
 ## Notes
-- Story artifacts normalized to enforce story completion gate semantics.
-- `.memory/` is now tracked by git in this repository (ignore rule removed).
-- Next work is integration test hardening and coverage closure for in-progress stories.
+- Ran story-clarification Q&A and recorded verbatim transcript in `research-c4a1f0de-story-clarifications-qna.md`.
+- Next execution focus: matcher tie-error UX, strategy enum, migration set, and integration tests.
