@@ -79,16 +79,50 @@ In Pi:
 
 ## Configuration
 
-Settings live in `~/.pi/agent/pi-worktrees-settings.json` under `worktree`: 
+Settings live in `~/.pi/agent/pi-worktrees-settings.json`.
 
 ```json
 {
+  "worktrees": {
+    "github.com/org/repo": {
+      "parentDir": "~/work/org/repo.worktrees",
+      "onCreate": ["mise install", "bun install"]
+    },
+    "github.com/org/*": {
+      "parentDir": "~/work/org/shared.worktrees",
+      "onCreate": "mise setup"
+    }
+  },
+  "matchingStrategy": "fail-on-tie",
   "worktree": {
     "parentDir": "~/.local/share/worktrees/{{project}}",
     "onCreate": "mise setup"
   }
 }
 ```
+
+### Matching model
+
+For the current repository, settings are resolved in this order:
+
+1. Exact URL match in `worktrees`
+2. Most-specific glob match in `worktrees`
+3. Fallback to legacy `worktree`
+
+`matchingStrategy` controls ties between equally specific patterns:
+
+- `fail-on-tie` (default)
+- `first-wins`
+- `last-wins`
+
+### `onCreate`
+
+`onCreate` accepts either:
+
+- a single string command
+- an array of commands
+
+When an array is used, commands run sequentially and stop on first failure.
 
 ### `parentDir`
 
@@ -97,24 +131,29 @@ Where new worktrees are created.
 - **Default**: `../<project>.worktrees/` (relative to your main worktree)
 - Supports template variables
 
-### `onCreate`
-
-Optional command run **after** successful worktree creation, in the new worktree directory.
-
-Useful examples:
-
-- `mise setup`
-- `bun install`
-- `mise setup && bun install`
-
 ### Template variables
 
-Available in `parentDir` and `onCreate` strings:
+Available in `parentDir` and `onCreate` values:
 
 - `{{path}}` → created worktree path
 - `{{name}}` → feature/worktree name
 - `{{branch}}` → created branch name
 - `{{project}}` → repository name
+
+### Migration note
+
+Legacy single-worktree config remains supported:
+
+```json
+{
+  "worktree": {
+    "parentDir": "...",
+    "onCreate": "..."
+  }
+}
+```
+
+You can migrate incrementally by adding `worktrees` + `matchingStrategy` while keeping `worktree` as fallback.
 
 ---
 
