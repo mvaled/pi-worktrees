@@ -61,40 +61,38 @@ function getFallbackSettings(config: LegacyConfig): Record<string, unknown> {
   return fallback;
 }
 
-export const configMigrations: Migration[] = [
-  {
-    id: 'legacy-flat-worktree-settings',
-    up(config: unknown): Record<string, unknown> {
-      const record = toRecord(config);
-      const parsed = Parse(LegacyConfigSchema, record);
-      const fallback = getFallbackSettings(parsed);
+export const migration: Migration = {
+  id: 'legacy-flat-worktree-settings',
+  up(config: unknown): Record<string, unknown> {
+    const record = toRecord(config);
+    const parsed = Parse(LegacyConfigSchema, record);
+    const fallback = getFallbackSettings(parsed);
 
-      const next = { ...record };
-      if (Object.keys(fallback).length > 0) {
-        next.worktree = fallback;
-      }
+    const next = { ...record };
+    if (Object.keys(fallback).length > 0) {
+      next.worktree = fallback;
+    }
 
-      delete next.parentDir;
-      delete next.onCreate;
+    delete next.parentDir;
+    delete next.onCreate;
 
-      return next;
-    },
-    down(config: unknown): Record<string, unknown> {
-      const record = toRecord(config);
-      const parsed = Parse(LegacyConfigSchema, record);
-      const worktree = toRecord(parsed.worktree);
-
-      const next = { ...record };
-      if (worktree.parentDir !== undefined) {
-        next.parentDir = worktree.parentDir;
-      }
-
-      if (worktree.onCreate !== undefined) {
-        next.onCreate = worktree.onCreate;
-      }
-
-      delete next.worktree;
-      return next;
-    },
+    return next;
   },
-];
+  down(config: unknown): Record<string, unknown> {
+    const record = toRecord(config);
+    const parsed = Parse(LegacyConfigSchema, record);
+    const worktree = toRecord(parsed.worktree);
+
+    const next = { ...record };
+    if (worktree.parentDir !== undefined) {
+      next.parentDir = worktree.parentDir;
+    }
+
+    if (worktree.onCreate !== undefined) {
+      next.onCreate = worktree.onCreate;
+    }
+
+    delete next.worktree;
+    return next;
+  },
+};

@@ -1,8 +1,10 @@
 import { execSync } from 'child_process';
 import { appendFileSync, existsSync, readFileSync, statSync } from 'fs';
 import { basename, dirname, join, relative, resolve } from 'path';
-import type { WorktreeSettingsConfig } from './config/config.ts';
 import { expandTemplate } from './templates.ts';
+import { MatchingStrategy, WorktreeSettingsConfig } from './config/schema.ts';
+import { DefaultWorktreeSettings, PiWorktreeConfiguredWorktreeMap } from './config/config.ts';
+import { globMatch } from './glob.ts';
 
 export interface WorktreeInfo {
   path: string;
@@ -25,38 +27,6 @@ export function git(args: string[], cwd?: string): string {
   } catch (error) {
     throw new Error(`git ${args[0]} failed: ${(error as Error).message}`);
   }
-}
-
-/**
- * Normalize git remote URL into canonical https form for deterministic matching.
- */
-export function normalizeGitUrl(url: string): string {
-  const trimmed = url.trim();
-  if (!trimmed) {
-    return '';
-  }
-
-  let normalized = trimmed.replace(/\.git$/i, '');
-
-  const sshShortMatch = normalized.match(/^git@([^:]+):(.+)$/i);
-  if (sshShortMatch) {
-    const [, host, path] = sshShortMatch;
-    normalized = `https://${host}/${path}`;
-  }
-
-  const sshLongMatch = normalized.match(/^ssh:\/\/git@([^/]+)\/(.+)$/i);
-  if (sshLongMatch) {
-    const [, host, path] = sshLongMatch;
-    normalized = `https://${host}/${path}`;
-  }
-
-  normalized = normalized.replace(/^(https?:\/\/|git:\/\/)/i, 'https://');
-  normalized = normalized.replace(/^https:\/\/[^@]+@/i, 'https://');
-
-  normalized = normalized.replace(/\/+/g, '/');
-  normalized = normalized.replace(/^https:\//, 'https://');
-
-  return normalized.toLowerCase();
 }
 
 /**
@@ -181,13 +151,30 @@ export function isPathInsideRepo(repoPath: string, targetPath: string): boolean 
 
 /**
  * Resolve the parent directory used for worktrees.
+ *
+ * Attempts to match to a configured repo, or defaults to using current git repos main worktree
  */
-export function getWorktreeParentDir(cwd: string, settings: WorktreeSettingsConfig): string {
+export function getWorktreeParentDir(
+  cwd: string,
+  repos: PiWorktreeConfiguredWorktreeMap,
+  matchStrategy?: MatchingStrategy
+): string {
   const project = getProjectName(cwd);
   const mainWorktree = getMainWorktreePath(cwd);
+  const repo = getRemoteUrl(cwd);
 
-  if (settings.parentDir) {
-    return expandTemplate(settings.parentDir, {
+  if (!repo) {
+    throw new Error('Not a git repo');
+  }
+
+  const worktree = matchRepo(repo, repos, matchStrategy);
+
+  if (worktree.type === 'tie-conflict') {
+    throw new Error('');
+  }
+
+  if (worktree.settings.parentDir) {
+    return expandTemplate(worktree.settings.parentDir, {
       path: '',
       name: '',
       branch: '',
@@ -228,4 +215,166 @@ export function ensureExcluded(cwd: string, worktreeParentDir: string): void {
   } catch {
     // non-fatal
   }
+}
+
+class ConfiguredRepoKeyMismatchException extends Error {
+  constructor(winner: string) {
+    super();
+    this.message = `ConfiguredRepoKeyMismatch: expected ${winner} to resolve to WorktreeSettingsConfig`;
+  }
+}
+
+export interface MatchResult {
+  settings: WorktreeSettingsConfig;
+  matchedPattern: string | null;
+}
+
+export interface TieConflictError {
+  patterns: string[];
+  url: string;
+  message: string;
+}
+
+export interface ScoredMatch {
+  pattern: string;
+  normalizedPattern: string;
+  specificity: number;
+}
+export type Result =
+  | ({
+      type: 'exact';
+    } & MatchResult)
+  | ({
+      type: 'no-match';
+    } & MatchResult)
+  | ({
+      type: 'default';
+    } & MatchResult)
+  | ({ type: 'tie-conflict' } & TieConflictError)
+  | ({ type: 'first-wins' } & MatchResult)
+  | ({ type: 'last-wins' } & MatchResult);
+
+function stripProtocol(value: string): string {
+  return value.replace(/^https:\/\//, '');
+}
+
+function calculateSpecificity(normalizedPattern: string): number {
+  const segments = stripProtocol(normalizedPattern).split('/').filter(Boolean);
+  let score = 0;
+
+  for (const segment of segments) {
+    if (segment === '**' || segment === '*') {
+      continue;
+    }
+
+    if (segment.includes('*')) {
+      score += 0.5;
+      continue;
+    }
+
+    score += 1;
+  }
+
+  return score;
+}
+
+function resolveTie(
+  tiedMatches: ScoredMatch[],
+  url: string,
+  repos: PiWorktreeConfiguredWorktreeMap,
+  matchingStrategy?: MatchingStrategy
+): Result {
+  const patterns = tiedMatches.map((match) => match.pattern);
+  const strategy = matchingStrategy || 'fail-on-tie';
+
+  if (strategy === 'fail-on-tie') {
+    return {
+      type: 'tie-conflict',
+      patterns,
+      url,
+      message: `Multiple patterns match with equal specificity:\n${patterns
+        .map((pattern) => `  - ${pattern}`)
+        .join('\n')}\n\nRefine patterns or set matchingStrategy to 'first-wins' or 'last-wins'.`,
+    };
+  }
+
+  const winner = strategy === 'last-wins' ? patterns[patterns.length - 1] : patterns[0];
+
+  const settings = repos.get(winner);
+
+  if (!settings) {
+    throw new Error();
+  }
+
+  return {
+    settings,
+    matchedPattern: winner,
+    type: strategy,
+  };
+}
+
+export function matchRepo(
+  url: string | null,
+  repos: PiWorktreeConfiguredWorktreeMap,
+  matchStrategy?: MatchingStrategy
+): Result {
+  if (!url || repos.size === 0) {
+    return {
+      settings: DefaultWorktreeSettings,
+      matchedPattern: null,
+      type: 'default',
+    };
+  }
+
+  const urlWithoutProtocol = stripProtocol(url);
+  const scoredMatches: ScoredMatch[] = [];
+
+  for (const [pattern, settings] of repos.entries()) {
+    const patternWithoutProtocol = stripProtocol(pattern);
+
+    if (url === pattern || urlWithoutProtocol === patternWithoutProtocol) {
+      return {
+        settings,
+        matchedPattern: pattern,
+        type: 'exact',
+      };
+    }
+
+    if (globMatch(urlWithoutProtocol, patternWithoutProtocol)) {
+      scoredMatches.push({
+        pattern,
+        normalizedPattern: patternWithoutProtocol,
+        specificity: calculateSpecificity(patternWithoutProtocol),
+      });
+    }
+  }
+
+  if (scoredMatches.length === 0) {
+    return {
+      settings: DefaultWorktreeSettings,
+      matchedPattern: null,
+      type: 'no-match',
+    };
+  }
+
+  scoredMatches.sort((left, right) => right.specificity - left.specificity);
+
+  const topSpecificity = scoredMatches[0].specificity;
+  const tiedMatches = scoredMatches.filter((match) => match.specificity === topSpecificity);
+
+  if (tiedMatches.length > 1) {
+    return resolveTie(tiedMatches, urlWithoutProtocol, repos, matchStrategy);
+  }
+
+  const winner = scoredMatches[0].pattern;
+  const settings = repos.get(winner);
+  if (!settings) {
+    throw new ConfiguredRepoKeyMismatchException(winner);
+  }
+
+  return {
+    settings,
+    matchedPattern: winner,
+    type: 'exact',
+  };
 }

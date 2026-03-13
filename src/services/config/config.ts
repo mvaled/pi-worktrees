@@ -1,75 +1,71 @@
-import { createConfigService, type ConfigService } from '@zenobius/pi-extension-config';
+import { createConfigService } from '@zenobius/pi-extension-config';
 import { Parse } from 'typebox/value';
-import { configMigrations } from './migrations/01-flat-single.ts';
+
+import { migration as migration_01 } from './migrations/01-flat-single.ts';
 import {
-  ResolvedConfigSchema,
-  UnresolvedConfigSchema,
-  type MatchingStrategy,
-  type ResolvedConfig,
-  type UnresolvedConfig,
-  type WorktreeSettingsConfig,
-} from './schema.ts';
+  getMainWorktreePath,
+  getProjectName,
+  getRemoteUrl,
+  getWorktreeParentDir,
+  matchRepo,
+} from '../git.ts';
+import { PiWorktreeConfig, PiWorktreeConfigSchema, WorktreeSettingsConfig } from './schema.ts';
 
-const APP_NAME = 'pi-worktrees';
+export async function createPiWorktreeConfigService() {
+  const parse = (value: unknown) => {
+    return Parse(PiWorktreeConfigSchema, value);
+  };
 
-export type { MatchingStrategy, ResolvedConfig, WorktreeSettingsConfig };
-export type WorktreeConfigService = ConfigService<ResolvedConfig>;
-
-function buildWorktreeSettings(config: UnresolvedConfig): WorktreeSettingsConfig {
-  const nested = config.worktree || {};
-  const parentDir = nested.parentDir ?? config.parentDir;
-  const onCreate = nested.onCreate ?? config.onCreate;
-
-  const next: WorktreeSettingsConfig = {};
-
-  if (parentDir !== undefined) {
-    next.parentDir = parentDir;
-  }
-
-  if (onCreate !== undefined) {
-    next.onCreate = onCreate;
-  }
-
-  return next;
-}
-
-export function normalizeConfig(value: unknown): ResolvedConfig {
-  const parsed = Parse(UnresolvedConfigSchema, value);
-
-  return Parse(ResolvedConfigSchema, {
-    worktrees: parsed.worktrees ?? {},
-    matchingStrategy: parsed.matchingStrategy ?? 'fail-on-tie',
-    fallback: buildWorktreeSettings(parsed),
-  });
-}
-
-export async function createWorktreeConfigService(): Promise<WorktreeConfigService> {
-  return createConfigService<ResolvedConfig>(APP_NAME, {
+  const store = await createConfigService('pi-worktrees', {
     defaults: {},
-    parse: normalizeConfig,
-    migrations: configMigrations,
+    parse,
+    migrations: [migration_01],
   });
+
+  const save = async (data: PiWorktreeConfig) => {
+    if (data.worktrees !== undefined) {
+      await store.set('worktrees', data.worktrees, 'home');
+    }
+
+    if (data.matchingStrategy !== undefined) {
+      await store.set('matchingStrategy', data.matchingStrategy, 'home');
+    }
+
+    await store.save('home');
+  };
+
+  const worktrees = new Map(Object.entries(store.config.worktrees || {}));
+
+  const current = (ctx: { cwd: string }) => {
+    const repo = getRemoteUrl(ctx.cwd);
+    const settings = matchRepo(repo, worktrees, store.config.matchingStrategy);
+    const project = getProjectName(ctx.cwd);
+    const mainWorktree = getMainWorktreePath(ctx.cwd);
+    const parentDir = getWorktreeParentDir(ctx.cwd, worktrees, store.config.matchingStrategy);
+
+    return {
+      repo,
+      settings,
+      project,
+      mainWorktree,
+      parentDir,
+    };
+  };
+
+  const service = {
+    ...store,
+    worktrees,
+    current,
+    save,
+  };
+
+  return service;
 }
 
-export async function saveWorktreeSettings(
-  configService: WorktreeConfigService,
-  settings: {
-    worktrees?: Record<string, WorktreeSettingsConfig>;
-    matchingStrategy?: MatchingStrategy;
-    fallback?: WorktreeSettingsConfig;
-  }
-): Promise<void> {
-  if (settings.worktrees !== undefined) {
-    await configService.set('worktrees', settings.worktrees, 'home');
-  }
+export const DefaultWorktreeSettings: WorktreeSettingsConfig = {
+  parentDir: '{repoName}.worktrees',
+  onCreate: 'cd {cwd}',
+};
 
-  if (settings.matchingStrategy !== undefined) {
-    await configService.set('matchingStrategy', settings.matchingStrategy, 'home');
-  }
-
-  if (settings.fallback !== undefined) {
-    await configService.set('worktree', settings.fallback, 'home');
-  }
-
-  await configService.save('home');
-}
+export type PiWorktreeConfigService = Awaited<ReturnType<typeof createPiWorktreeConfigService>>;
+export type PiWorktreeConfiguredWorktreeMap = PiWorktreeConfigService['worktrees'];
