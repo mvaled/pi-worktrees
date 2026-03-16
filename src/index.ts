@@ -89,7 +89,11 @@ const PiWorktreeExtension: ExtensionFactory = async function (pi) {
       }
 
       await configService.reload();
+
+      const settings = configService.current(ctx);
+
       await command(rest.join(' '), ctx, {
+        settings,
         configService,
       });
     },

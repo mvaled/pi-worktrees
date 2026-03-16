@@ -22,6 +22,8 @@ export async function createPiWorktreeConfigService() {
     migrations: [migration_01],
   });
 
+  await store.reload();
+
   const save = async (data: PiWorktreeConfig) => {
     if (data.worktrees !== undefined) {
       await store.set('worktrees', data.worktrees, 'home');
