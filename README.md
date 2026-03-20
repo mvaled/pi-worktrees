@@ -58,6 +58,32 @@ In Pi:
 /worktree prune
 ```
 
+### How I use `/worktrees`
+
+Since I use nvim and zellij, i want the worktrees I create to be clones of the workspace
+I have for the current one, so to this end, my `onCreate` looks like: 
+
+```json
+{
+  "worktrees": {
+    "**": {
+      "worktreeRoot": "{{mainWorktree}}.worktrees",
+      "onCreate": [
+        "mise trust --yes",
+        "mise setup",
+        "zellij action new-tab --name {{name}} --cwd {{path}}",
+        "zellij action new-pane --in-place --cwd {{path}} -- nvim",
+        "zellij action new-pane --cwd {{path}} --direction right -- pi"
+      ]
+    }
+  }
+}
+
+```
+
+This means when ever i create a new worktree, it creates a new zellij tab with nvim and pi running
+in it on the new worktree path.
+
 ---
 
 ## Command reference
