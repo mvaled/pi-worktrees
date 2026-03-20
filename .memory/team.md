@@ -1,10 +1,10 @@
 # Team
 
 ## Active Work
-- Session: unknown-session
+- Session: yZ1oQFmhO0whbPeq2sTGhc1C
 - Epic: epic-a7c9d4f2-multi-worktree-settings
 - Phase: validation-and-hardening
-- Owner: unknown-session
+- Owner: yZ1oQFmhO0whbPeq2sTGhc1C
 
 ## Notes
 - Loaded superpowers + miniproject workflow and reviewed epic/stories.

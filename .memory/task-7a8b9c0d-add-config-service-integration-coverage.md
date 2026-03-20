@@ -2,8 +2,8 @@
 id: 7a8b9c0d
 title: add-config-service-integration-coverage
 created_at: 2026-03-13T09:05:48+10:30
-updated_at: 2026-03-13T09:05:48+10:30
-status: todo
+updated_at: 2026-03-20T22:11:00+10:30
+status: done
 epic_id: a7c9d4f2
 phase_id: phase-2-validation-and-hardening
 story_id: e7b6a902
@@ -24,20 +24,31 @@ Ensure integration coverage exists in config-service suite to complement command
 - Phase: Phase 2: Validation and Hardening.
 
 ## Steps
-- [ ] Identify config-service integration harness points.
-- [ ] Add integration scenarios for matcher + fallback behavior.
-- [ ] Validate alignment with command-level suite expectations.
-- [ ] Document suite ownership and maintenance notes.
+- [x] Identify config-service integration harness points.
+- [x] Add integration scenarios for matcher + fallback behavior.
+- [x] Validate alignment with command-level suite expectations.
+- [x] Document suite ownership and maintenance notes.
 
 ## Unit Tests
-- (pending) integration/config-service-matching: verifies precedence/fallback in config-service context → supports AC#5 of story e7b6a902.
-- (pending) integration/config-service-oncreate-normalization: verifies normalized command list behavior in config layer → supports AC#5 of story e7b6a902.
+- `tests/services/config.service.integration.test.ts` (`provides worktree settings that resolve exact match over wildcard`, `provides worktree settings that fall back to default when no pattern matches`): verifies precedence/fallback in config-service context → supports AC#5 of story e7b6a902.
+- `tests/services/config.service.integration.test.ts` (`keeps onCreate values compatible with command-list normalization in command layer`): verifies onCreate values remain compatible with command-list normalization expectations → supports AC#5 of story e7b6a902.
 
 ## Expected Outcome
 Both config-service and command-level suites provide aligned integration confidence.
 
 ## Actual Outcome
-Not started.
+Completed. Added config-service integration coverage for matcher precedence, no-match fallback behavior, and onCreate command-list compatibility to complement command-level tests.
+
+### Verification Evidence
+- `tests/services/config.service.integration.test.ts`: config-service integration coverage for precedence, fallback, and onCreate command-list compatibility.
+- `tests/cmds/cmd.resolution.integration.test.ts` + `tests/cmds/oncreate.execution.integration.test.ts`: command-level integration behavior remains aligned with config-service assertions.
+- `bun test tests/services/config.service.integration.test.ts`: pass (3/3).
+- `bun test tests`: pass (18/18).
+
+### Next Implementation Checkpoint
+- [x] Add config-service integration harness for matcher/fallback coverage.
+- [x] Add onCreate normalization integration assertions.
+- [x] Move to `in-progress` once tests are added.
 
 ## Lessons Learned
-Pending during execution.
+Cross-suite assertions should exercise identical config contracts from both service and command entry points to prevent drift.

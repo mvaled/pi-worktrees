@@ -2,8 +2,8 @@
 id: 9e0f1a2b
 title: author-migration-set-worktree-to-worktrees
 created_at: 2026-03-13T09:05:48+10:30
-updated_at: 2026-03-13T09:05:48+10:30
-status: todo
+updated_at: 2026-03-20T21:49:00+10:30
+status: done
 epic_id: a7c9d4f2
 phase_id: phase-2-validation-and-hardening
 story_id: d3a54f18
@@ -24,21 +24,34 @@ Implement and version migration-set support in `pi-extension-config` for transit
 - Phase: Phase 2: Validation and Hardening.
 
 ## Steps
-- [ ] Define migration-set schema/version metadata.
-- [ ] Implement migration transform from legacy to plural shape.
-- [ ] Integrate migration execution in config load path.
-- [ ] Document migration/deprecation behavior aligned to framework policy.
+- [x] Define migration-set schema/version metadata.
+- [x] Implement migration transform from legacy to plural shape.
+- [x] Integrate migration execution in config load path.
+- [x] Document migration/deprecation behavior aligned to framework policy.
 
 ## Unit Tests
-- (pending) migration-set-registration test: verifies migration set exists and version metadata is valid → supports AC#5 of story d3a54f18.
-- (pending) migration-transform test: verifies legacy input migrates to new shape correctly → supports AC#4 of story d3a54f18.
-- (pending) migration-policy behavior test: verifies deprecation behavior follows policy → supports AC#6 of story d3a54f18.
+- `tests/services/config.migrations.test.ts` (`is versioned and executable as an ordered migration set`): verifies migration set ordering and versioned execution metadata via preview result → supports AC#5 of story d3a54f18.
+- `tests/services/config.migrations.test.ts` (`migrates legacy worktree shape to worktrees fallback pattern`): verifies `worktree` migrates to `worktrees["**"]` through migration execution → supports AC#4 of story d3a54f18.
+- `tests/services/config.migrations.test.ts` (`keeps migration behavior policy-driven through framework validation`): verifies migration path remains framework-driven and parse-validated without extension-specific deprecation logic → supports AC#6 of story d3a54f18.
 
 ## Expected Outcome
 Legacy users are migrated through shared migration infrastructure with versioned policy-driven behavior.
 
 ## Actual Outcome
-Not started.
+Completed. Implemented a versioned migration set that transitions legacy flat/singular config to `worktrees`, integrated it into config loading, added migration-set tests, and documented policy-driven deprecation behavior.
+
+### Verification Evidence
+- `src/services/config/migrations/02-worktree-to-worktrees.ts`: adds migration `legacy-worktree-to-worktrees` to move legacy `worktree` settings into `worktrees["**"]`.
+- `src/services/config/config.ts`: registers migration set `[migration_01, migration_02]` with `createConfigService(...)`.
+- `tests/services/config.migrations.test.ts`: covers migration-set registration/versioning, transform behavior, and policy-aligned behavior.
+- `README.md` migration note: documents migration chain and policy-driven deprecation behavior.
+- `bun test tests/services/config.migrations.test.ts tests/services/config.loader.integration.test.ts`: pass (6/6).
+- `bun test tests/services`: pass (11/11).
+
+### Next Implementation Checkpoint
+- [x] Define migration-set contract and version metadata.
+- [x] Implement `worktree` -> `worktrees` transform within migration-set flow.
+- [x] Add migration registration and behavior tests before moving to `in-progress`.
 
 ## Lessons Learned
-Pending during execution.
+Versioned migration chains keep compatibility transitions explicit and testable while avoiding extension-local deprecation side effects.

@@ -2,8 +2,8 @@
 id: b2c3d4e5
 title: add-schema-loader-integration-tests
 created_at: 2026-03-13T09:05:48+10:30
-updated_at: 2026-03-13T09:05:48+10:30
-status: todo
+updated_at: 2026-03-20T21:35:00+10:30
+status: done
 epic_id: a7c9d4f2
 phase_id: phase-2-validation-and-hardening
 story_id: b2e9f0aa
@@ -24,21 +24,30 @@ Add story-level integration coverage for parser, onCreate normalization, legacy 
 - Phase: Phase 2: Validation and Hardening.
 
 ## Steps
-- [ ] Add integration test cases for `worktrees` map parsing.
-- [ ] Add test cases for `onCreate` string and array support.
-- [ ] Add legacy shape parseability tests.
-- [ ] Add persistence round-trip stability assertions.
+- [x] Add integration test cases for `worktrees` map parsing.
+- [x] Add test cases for `onCreate` string and array support.
+- [x] Add legacy shape parseability tests.
+- [x] Add persistence round-trip stability assertions.
 
 ## Unit Tests
-- (pending) integration/config-load-worktrees: verifies `worktrees` parsing and `onCreate` normalization → supports AC#1, AC#2 of story b2e9f0aa.
-- (pending) integration/config-legacy-shape: verifies legacy shape and flat fields parse path → supports AC#3 of story b2e9f0aa.
-- (pending) integration/config-persist-roundtrip: verifies stable persisted output → supports AC#4 of story b2e9f0aa.
+- `tests/services/config.loader.integration.test.ts` (`parses worktrees map with onCreate as string or string[]`): verifies `worktrees` parsing and `onCreate` normalization support → supports AC#1, AC#2 of story b2e9f0aa.
+- `tests/services/config.loader.integration.test.ts` (`keeps legacy singular shape parseable via migration path`): verifies legacy shape compatibility and migration path behavior → supports AC#3 of story b2e9f0aa.
+- `tests/services/config.loader.integration.test.ts` (`persists config with stable round-trip shape`): verifies stable persisted output shape through save and parse round-trip → supports AC#4 of story b2e9f0aa.
 
 ## Expected Outcome
 All schema/loader acceptance criteria have linked passing integration tests.
 
 ## Actual Outcome
-Not started.
+Completed. Added config loader integration coverage for `worktrees` parsing, `onCreate` string/array handling, legacy shape parseability, and persistence round-trip stability.
+
+### Verification Evidence
+- `tests/services/config.loader.integration.test.ts`: includes three integration tests covering parser, migration compatibility, and persistence round-trip behavior.
+- `bun test tests/services/config.loader.integration.test.ts`: all new integration tests pass (3/3).
+
+### Next Implementation Checkpoint
+- [x] Create integration harness for config load/save scenarios.
+- [x] Add `worktrees` parse, `onCreate` normalize, legacy shape, and roundtrip persistence tests.
+- [x] Move to `in-progress` once first test file is added.
 
 ## Lessons Learned
-Pending during execution.
+Mock-backed integration tests are sufficient to validate loader contracts without requiring filesystem-bound config fixtures.

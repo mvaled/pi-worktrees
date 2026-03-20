@@ -2,8 +2,8 @@
 id: 3c4d5e6f
 title: add-command-level-resolution-integration-tests
 created_at: 2026-03-13T09:05:48+10:30
-updated_at: 2026-03-13T09:05:48+10:30
-status: todo
+updated_at: 2026-03-20T22:03:00+10:30
+status: done
 epic_id: a7c9d4f2
 phase_id: phase-2-validation-and-hardening
 story_id: e7b6a902
@@ -24,21 +24,32 @@ Add command-level integration tests for precedence, fallback, and `onCreate` exe
 - Phase: Phase 2: Validation and Hardening.
 
 ## Steps
-- [ ] Build integration fixtures for exact/wildcard collisions.
-- [ ] Add no-match fallback integration scenarios.
-- [ ] Add `onCreate` ordered execution assertions.
-- [ ] Add failure-stop assertion when command in sequence fails.
+- [x] Build integration fixtures for exact/wildcard collisions.
+- [x] Add no-match fallback integration scenarios.
+- [x] Add `onCreate` ordered execution assertions.
+- [x] Add failure-stop assertion when command in sequence fails.
 
 ## Unit Tests
-- (pending) integration/cmd-resolution-precedence: verifies exact > wildcard precedence → supports AC#1 of story e7b6a902.
-- (pending) integration/cmd-resolution-fallback: verifies legacy fallback when no pattern matches → supports AC#2 of story e7b6a902.
-- (pending) integration/cmd-oncreate-sequence: verifies order and failure-stop behavior → supports AC#3, AC#4 of story e7b6a902.
+- `tests/cmds/cmd.resolution.integration.test.ts` (`uses exact match over wildcard settings when creating a worktree`): verifies exact > wildcard precedence in command-level create flow → supports AC#1 of story e7b6a902.
+- `tests/cmds/cmd.resolution.integration.test.ts` (`uses fallback pattern settings when no specific repo pattern matches`): verifies no-match fallback resolution in command-level create flow → supports AC#2 of story e7b6a902.
+- `tests/cmds/oncreate.execution.integration.test.ts` (`runs onCreate commands in order`, `stops execution at first command failure`): verifies ordered `onCreate` execution and failure-stop behavior → supports AC#3, AC#4 of story e7b6a902.
 
 ## Expected Outcome
 Command-level behavior is regression-protected for matching and execution semantics.
 
 ## Actual Outcome
-Not started.
+Completed. Added command-level integration tests for precedence, fallback resolution, and `onCreate` order/failure-stop behavior.
+
+### Verification Evidence
+- `tests/cmds/cmd.resolution.integration.test.ts`: command-level create-flow coverage for exact-over-wildcard precedence and fallback resolution.
+- `tests/cmds/oncreate.execution.integration.test.ts`: command hook execution-order and failure-stop coverage.
+- `bun test tests/cmds`: pass (4/4).
+- `bun test tests`: pass (15/15).
+
+### Next Implementation Checkpoint
+- [x] Add command integration fixtures for exact/wildcard/no-match.
+- [x] Add `onCreate` ordered execution + failure-stop tests.
+- [x] Move to `in-progress` after first integration test lands.
 
 ## Lessons Learned
-Pending during execution.
+Command-level tests are easiest to stabilize by mocking shell execution boundaries while keeping resolution logic realistic.

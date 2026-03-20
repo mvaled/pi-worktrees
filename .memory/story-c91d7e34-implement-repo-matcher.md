@@ -2,7 +2,7 @@
 id: c91d7e34
 title: implement-repo-matcher
 created_at: 2026-03-12T00:00:00+10:30
-updated_at: 2026-03-13T09:05:48+10:30
+updated_at: 2026-03-20T22:24:00+10:30
 status: in-progress
 epic_id: a7c9d4f2
 priority: critical
@@ -20,8 +20,8 @@ As a user working across multiple repositories, I want my repo URL to resolve to
 - [x] Matcher evaluates patterns against the full git remote URL.
 - [x] Selection precedence is deterministic: exact > most-specific glob.
 - [x] Glob specificity uses segment-based specificity (not longest literal string).
-- [ ] Tie on equal specificity produces a UI-visible conflict error (no silent winner); exact UX refinement is pending.
-- [ ] Matching strategy is configurable via enum in config (future refinement item).
+- [x] Tie on equal specificity produces a UI-visible conflict error (no silent winner).
+- [x] Matching strategy is configurable via enum in config (`fail-on-tie` | `first-wins` | `last-wins`).
 - [x] No-match behavior delegates to fallback.
 - [ ] Story-level E2E verification is linked and passing for all criteria.
 
@@ -39,17 +39,30 @@ Matching is the core capability that enables per-repo configuration.
 ### E2E Tests
 | AC# | Criterion | Test file/case | Status |
 |---|---|---|---|
-| AC1 | URL normalization works | Planned command-level resolver test | not-implemented |
-| AC2 | Full remote URL targeting works | Planned command-level resolver test | not-implemented |
-| AC3 | Deterministic precedence works | Planned precedence scenario test | not-implemented |
-| AC4 | Segment-based specificity ranking works | Planned precedence scenario test | not-implemented |
-| AC5 | Tie conflict surfaces UI error | Planned conflict scenario test | not-implemented |
-| AC6 | Configurable strategy enum supported | Planned strategy-config test | not-implemented |
-| AC7 | No-match fallback path works | Planned fallback scenario test | not-implemented |
+| AC1 | URL normalization works | Dedicated ssh/https normalization matcher test | not-implemented |
+| AC2 | Full remote URL targeting works | `tests/cmds/cmd.resolution.integration.test.ts` + `tests/services/config.service.integration.test.ts` (https URL resolution path) | passing |
+| AC3 | Deterministic precedence works | `tests/cmds/cmd.resolution.integration.test.ts` (`uses exact match over wildcard settings when creating a worktree`) | passing |
+| AC4 | Segment-based specificity ranking works | Dedicated specificity ranking test (equal domains, differing segment specificity) | not-implemented |
+| AC5 | Tie conflict surfaces UI error | `tests/services/git.matcher.test.ts` (`returns tie-conflict by default (fail-on-tie) with actionable details`) | passing |
+| AC6 | Configurable strategy enum supported | `tests/services/git.matcher.test.ts` + `tests/services/config.schema.test.ts` | passing |
+| AC7 | No-match fallback path works | `tests/cmds/cmd.resolution.integration.test.ts` + `tests/services/config.service.integration.test.ts` | passing |
 
 ### Unit Test Coverage (via Tasks)
 - Task 1f2e3d4c: tie conflict fail-loud behavior → supports AC#5.
 - Task 5a6b7c8d: configurable strategy enum behavior and validation → supports AC#6.
+
+## Verification Evidence
+- `src/services/git.ts`: normalization, glob specificity scoring, deterministic precedence, and tie result generation are implemented.
+- `src/services/config/schema.ts`: `matchingStrategy` enum is defined.
+- `src/services/config/config.ts`: strategy is persisted and passed to matcher calls.
+- `src/services/git.ts`: parent-dir resolution now throws actionable tie-conflict message.
+- `src/index.ts`: command execution now catches and surfaces failures through `ctx.ui.notify(...)`.
+- `tests/services/git.matcher.test.ts`: verifies fail-on-tie conflict details plus `first-wins` / `last-wins` deterministic behavior.
+- `tests/services/config.schema.test.ts`: verifies `matchingStrategy` enum accepts valid values and rejects invalid values.
+
+## Next Story Checkpoint
+- [x] Complete task `5a6b7c8d` by adding schema enum validation test coverage.
+- [ ] Add dedicated matcher tests for AC#1 (ssh/https normalization) and AC#4 (segment-specific specificity ranking), then re-evaluate story completion.
 
 ## Notes
 - Glob behavior (case and separator handling) follows minimatch semantics/options.
