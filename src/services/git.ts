@@ -170,7 +170,7 @@ export function getWorktreeParentDir(
   const worktree = matchRepo(repo, repos, matchStrategy);
 
   if (worktree.type === 'tie-conflict') {
-    throw new Error('');
+    throw new Error(worktree.message);
   }
 
   if (worktree.settings.parentDir) {

@@ -5,7 +5,11 @@
  * Codifies the patterns from the using-git-worktrees skill into an interactive command.
  */
 
-import type { ExtensionFactory } from '@mariozechner/pi-coding-agent';
+import type {
+  ExtensionFactory,
+  ExtensionAPI,
+  ExtensionContext,
+} from '@mariozechner/pi-coding-agent';
 import type { CmdHandler } from './types.ts';
 import { cmdCd } from './cmds/cmdCd.ts';
 import { cmdCreate } from './cmds/cmdCreate.ts';
@@ -76,6 +80,31 @@ const commands: Record<string, CmdHandler> = {
 
 const PiWorktreeExtension: ExtensionFactory = async function (pi) {
   const configService = await createPiWorktreeConfigService();
+  const queue: { msg: string; type: Parameters<ExtensionContext['ui']['notify']>[1] }[] = [];
+
+  configService.events.on('MigrationFailed', () => {
+    queue.push({ type: 'error', msg: 'MigrationFailed' });
+  });
+  configService.events.on('MigrationApplied', () => {
+    queue.push({ type: 'info', msg: 'MigrationApplied' });
+  });
+  configService.events.on('ConfigLoading', () => {
+    queue.push({ type: 'info', msg: 'ConfigLoading' });
+  });
+  configService.events.on('ConfigLoaded', () => {
+    queue.push({ type: 'info', msg: 'ConfigLoaded' });
+  });
+
+  pi.on('session_start', async (event, ctx) => {
+    await configService.ready;
+    while (queue.length > 0) {
+      const notification = queue.shift();
+      if (!notification) {
+        return;
+      }
+      ctx.ui.setStatus(`Worktrees`, notification.msg);
+    }
+  });
 
   pi.registerCommand('worktree', {
     description: 'Git worktree management for isolated workspaces',
@@ -88,14 +117,17 @@ const PiWorktreeExtension: ExtensionFactory = async function (pi) {
         return;
       }
 
+      try {
       await configService.reload();
-
-      const settings = configService.current(ctx);
-
+        const settings = configService.current(ctx);
       await command(rest.join(' '), ctx, {
-        settings,
-        configService,
-      });
+          settings,
+          configService,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        ctx.ui.notify(`Worktree command failed: ${message}`, 'error');
+      }
     },
   });
 };
