@@ -2,6 +2,7 @@ import { createConfigService } from '@zenobius/pi-extension-config';
 import { Parse } from 'typebox/value';
 
 import { migration as migration_01 } from './migrations/01-flat-single.ts';
+import { migration as migration_02 } from './migrations/02-worktree-to-worktrees.ts';
 import {
   getMainWorktreePath,
   getProjectName,
@@ -19,7 +20,7 @@ export async function createPiWorktreeConfigService() {
   const store = await createConfigService('pi-worktrees', {
     defaults: {},
     parse,
-    migrations: [migration_01],
+    migrations: [migration_01, migration_02],
   });
 
   await store.reload();

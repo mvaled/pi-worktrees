@@ -144,8 +144,8 @@ Available in `parentDir` and `onCreate` values:
 
 ### Migration note
 
-Legacy single-worktree config remains supported:
-
+Legacy single-worktree config remains supported and is migrated through the shared
+`@zenobius/pi-extension-config` migration chain.
 ```json
 {
   "worktree": {
@@ -155,7 +155,14 @@ Legacy single-worktree config remains supported:
 }
 ```
 
-You can migrate incrementally by adding `worktrees` + `matchingStrategy` while keeping `worktree` as fallback.
+Migration behavior:
+
+1. Legacy flat keys are normalized to `worktree`
+2. Legacy `worktree` is migrated to `worktrees["**"]`
+3. Migration version metadata is managed by `@zenobius/pi-extension-config`
+
+Deprecation timing follows the migration policy in `@zenobius/pi-extension-config`.
+This extension does not apply a separate ad-hoc deprecation mechanism.
 
 ---
 
