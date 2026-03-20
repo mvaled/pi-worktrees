@@ -1,0 +1,8 @@
+{
+  "worktrees": {
+    "**": {
+      "worktreeRoot": "{{mainWorktree}}.worktrees",
+      "onCreate": ["pwd", "mise trust --yes", "mise setup", "ls -al"]
+    }
+  }
+}
