@@ -4,8 +4,6 @@ import type { PiWorktreeConfig } from '../../src/services/config/schema.ts';
 
 import { createPiWorktreeConfigService } from '../../src/services/config/config.ts';
 
-type StoreTarget = 'home' | 'project';
-
 type MockStore = {
   config: PiWorktreeConfig;
   ready: Promise<void>;
@@ -13,12 +11,6 @@ type MockStore = {
   reload: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
   events: { on: ReturnType<typeof vi.fn> };
-};
-
-type CreateConfigServiceOptions = {
-  defaults?: Partial<PiWorktreeConfig>;
-  parse?: (config: unknown) => PiWorktreeConfig;
-  migrations?: Array<{ id: string; up: (config: unknown) => Record<string, unknown> }>;
 };
 
 const createConfigServiceMock = vi.fn();
@@ -33,11 +25,11 @@ function createMockStore(initialConfig: PiWorktreeConfig = {}): MockStore {
   const nextStore: MockStore = {
     config: { ...initialConfig },
     ready: Promise.resolve(),
-    set: vi.fn(async (key: string, value: unknown, _target: StoreTarget = 'home') => {
+    set: vi.fn(async (key: string, value: unknown) => {
       (nextStore.config as Record<string, unknown>)[key] = value;
     }),
     reload: vi.fn(async () => {}),
-    save: vi.fn(async (_target: StoreTarget = 'home') => {}),
+    save: vi.fn(async () => {}),
     events: { on: vi.fn() },
   };
 
@@ -47,11 +39,9 @@ function createMockStore(initialConfig: PiWorktreeConfig = {}): MockStore {
 beforeEach(() => {
   store = createMockStore();
   createConfigServiceMock.mockReset();
-  createConfigServiceMock.mockImplementation(
-    async (_name: string, _options: CreateConfigServiceOptions = {}) => {
-      return store;
-    }
-  );
+  createConfigServiceMock.mockImplementation(async () => {
+    return store;
+  });
 });
 
 describe('config service integration', () => {

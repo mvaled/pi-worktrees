@@ -24,7 +24,7 @@ export const cmdList: CmdHandler = async (_args, ctx, deps) => {
 
   const configured = Array.from(deps.configService.worktrees.entries()).map(
     ([pattern, settings]) => {
-      return `${pattern}\n    ${settings.parentDir}\n    ${settings.onCreate}`;
+      return `${pattern}\n    ${settings.worktreeRoot ?? settings.parentDir}\n    ${settings.onCreate}`;
     }
   );
 

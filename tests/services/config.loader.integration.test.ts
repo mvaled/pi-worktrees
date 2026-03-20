@@ -4,7 +4,8 @@ import { migration as legacyMigration } from '../../src/services/config/migratio
 import type { PiWorktreeConfig } from '../../src/services/config/schema.ts';
 import { createPiWorktreeConfigService } from '../../src/services/config/config.ts';
 
-type StoreTarget = 'home' | 'project';
+// eslint-disable-next-line no-unused-vars
+type ParseConfigFn = (value: unknown) => PiWorktreeConfig;
 
 type MockStore = {
   config: PiWorktreeConfig;
@@ -15,11 +16,7 @@ type MockStore = {
   events: { on: ReturnType<typeof vi.fn> };
 };
 
-type CreateConfigServiceOptions = {
-  defaults?: Partial<PiWorktreeConfig>;
-  parse?: (config: unknown) => PiWorktreeConfig;
-  migrations?: Array<{ id: string; up: (config: unknown) => Record<string, unknown> }>;
-};
+type CreateConfigServiceOptions = Record<string, unknown>;
 
 const createConfigServiceMock = vi.fn();
 
@@ -36,11 +33,11 @@ function createMockStore(initialConfig: PiWorktreeConfig = {}): MockStore {
   const nextStore: MockStore = {
     config: { ...initialConfig },
     ready: Promise.resolve(),
-    set: vi.fn(async (key: string, value: unknown, _target: StoreTarget = 'home') => {
+    set: vi.fn(async (key: string, value: unknown) => {
       (nextStore.config as Record<string, unknown>)[key] = value;
     }),
     reload: vi.fn(async () => {}),
-    save: vi.fn(async (_target: StoreTarget = 'home') => {}),
+    save: vi.fn(async () => {}),
     events: { on: vi.fn() },
   };
 
@@ -64,7 +61,7 @@ describe('config loader integration', () => {
   it('parses worktrees map with onCreate as string or string[]', async () => {
     await createPiWorktreeConfigService();
 
-    const parse = capturedOptions?.parse;
+    const parse = capturedOptions?.parse as ParseConfigFn | undefined;
     expect(parse).toBeDefined();
 
     const parsedString = parse?.({
@@ -74,6 +71,7 @@ describe('config loader integration', () => {
           onCreate: 'cd {cwd}',
         },
       },
+      logfile: '/tmp/pi-worktree-{sessionId}-{name}.log',
     });
 
     const parsedArray = parse?.({
@@ -83,6 +81,7 @@ describe('config loader integration', () => {
           onCreate: ['cd {cwd}', 'git status'],
         },
       },
+      logfile: '/tmp/pi-worktree-{sessionId}-{name}-{timestamp}.log',
     });
 
     expect(parsedString).toEqual({
@@ -92,6 +91,7 @@ describe('config loader integration', () => {
           onCreate: 'cd {cwd}',
         },
       },
+      logfile: '/tmp/pi-worktree-{sessionId}-{name}.log',
     });
 
     expect(parsedArray).toEqual({
@@ -101,14 +101,15 @@ describe('config loader integration', () => {
           onCreate: ['cd {cwd}', 'git status'],
         },
       },
+      logfile: '/tmp/pi-worktree-{sessionId}-{name}-{timestamp}.log',
     });
   });
 
   it('keeps legacy singular shape parseable via migration path', async () => {
     await createPiWorktreeConfigService();
 
-    const parse = capturedOptions?.parse;
-    const migration = capturedOptions?.migrations?.[0];
+    const parse = capturedOptions?.parse as ParseConfigFn | undefined;
+    const migration = (capturedOptions?.migrations as Array<{ id: string }> | undefined)?.[0];
 
     expect(parse).toBeDefined();
     expect(migration?.id).toBe('legacy-flat-worktree-settings');
@@ -140,6 +141,7 @@ describe('config loader integration', () => {
     store = createMockStore({
       worktrees,
       matchingStrategy: 'fail-on-tie',
+      logfile: '/tmp/custom-worktree-{sessionId}.log',
     });
 
     createConfigServiceMock.mockReset();
@@ -157,17 +159,26 @@ describe('config loader integration', () => {
     await service.save({
       worktrees,
       matchingStrategy: 'last-wins',
+      logfile: '/tmp/custom-worktree-{sessionId}.log',
     });
 
     expect(store.set).toHaveBeenNthCalledWith(1, 'worktrees', worktrees, 'home');
     expect(store.set).toHaveBeenNthCalledWith(2, 'matchingStrategy', 'last-wins', 'home');
+    expect(store.set).toHaveBeenNthCalledWith(
+      3,
+      'logfile',
+      '/tmp/custom-worktree-{sessionId}.log',
+      'home'
+    );
     expect(store.save).toHaveBeenCalledWith('home');
 
     expect(store.config.worktrees).toEqual(worktrees);
     expect(store.config.matchingStrategy).toBe('last-wins');
-    expect(capturedOptions?.parse?.(store.config)).toEqual({
+    expect(store.config.logfile).toBe('/tmp/custom-worktree-{sessionId}.log');
+    expect((capturedOptions?.parse as ParseConfigFn | undefined)?.(store.config)).toEqual({
       worktrees,
       matchingStrategy: 'last-wins',
+      logfile: '/tmp/custom-worktree-{sessionId}.log',
     });
   });
 });

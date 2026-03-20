@@ -3,17 +3,19 @@ import { runMigrations } from '@zenobius/pi-extension-config';
 
 import { migration as migration01 } from '../../src/services/config/migrations/01-flat-single.ts';
 import { migration as migration02 } from '../../src/services/config/migrations/02-worktree-to-worktrees.ts';
+import { migration as migration03 } from '../../src/services/config/migrations/03-parentDir-to-worktreeRoot.ts';
 import { PiWorktreeConfigSchema } from '../../src/services/config/schema.ts';
 import { Parse } from 'typebox/value';
 import { matchRepo } from '../../src/services/git.ts';
 
 describe('config migration set', () => {
   it('is versioned and executable as an ordered migration set', async () => {
-    const migrations = [migration01, migration02];
+    const migrations = [migration01, migration02, migration03];
 
     expect(migrations.map((migration) => migration.id)).toEqual([
       'legacy-flat-worktree-settings',
       'legacy-worktree-to-worktrees',
+      'parentDir-to-worktreeRoot',
     ]);
 
     const preview = await runMigrations({
@@ -24,13 +26,13 @@ describe('config migration set', () => {
     });
 
     expect(preview.status).toBe('preview');
-    expect(preview.targetVersion).toBe(2);
-    expect(preview.finalVersion).toBe(2);
-    expect(preview.pendingCount).toBe(2);
+    expect(preview.targetVersion).toBe(3);
+    expect(preview.finalVersion).toBe(3);
+    expect(preview.pendingCount).toBe(3);
   });
 
   it('migrates legacy worktree shape to worktrees fallback pattern', async () => {
-    const migrations = [migration01, migration02];
+    const migrations = [migration01, migration02, migration03];
 
     const result = await runMigrations({
       config: {
@@ -38,26 +40,28 @@ describe('config migration set', () => {
           parentDir: '/tmp/legacy.worktrees',
           onCreate: 'cd {cwd}',
         },
-      },
+        logfile: '/tmp/pi-worktree-{sessionId}-{name}-{timestamp}.log',
+      } as unknown,
       currentVersion: 1,
       migrations,
       parse: (value: unknown) => Parse(PiWorktreeConfigSchema, value),
     });
 
     expect(result.status).toBe('migrated');
-    expect(result.finalVersion).toBe(2);
+    expect(result.finalVersion).toBe(3);
     expect(result.config).toEqual({
       worktrees: {
         '**': {
-          parentDir: '/tmp/legacy.worktrees',
+          worktreeRoot: '/tmp/legacy.worktrees',
           onCreate: 'cd {cwd}',
         },
       },
+      logfile: '/tmp/pi-worktree-{sessionId}-{name}-{timestamp}.log',
     });
   });
 
   it('uses migrated worktrees fallback pattern for no-match resolution', async () => {
-    const migrations = [migration01, migration02];
+    const migrations = [migration01, migration02, migration03];
 
     const migrationResult = await runMigrations({
       config: {
@@ -65,7 +69,7 @@ describe('config migration set', () => {
           parentDir: '/tmp/legacy-fallback.worktrees',
           onCreate: 'echo legacy-fallback',
         },
-      },
+      } as unknown,
       currentVersion: 1,
       migrations,
       parse: (value: unknown) => Parse(PiWorktreeConfigSchema, value),
@@ -82,17 +86,53 @@ describe('config migration set', () => {
     }
 
     expect(result.matchedPattern).toBe('**');
-    expect(result.settings.parentDir).toBe('/tmp/legacy-fallback.worktrees');
+    expect(result.settings.worktreeRoot).toBe('/tmp/legacy-fallback.worktrees');
+  });
+
+  it('merges legacy worktree fallback into existing worktrees map', async () => {
+    const migrations = [migration01, migration02, migration03];
+
+    const result = await runMigrations({
+      config: {
+        worktrees: {
+          'github.com/org/*': {
+            worktreeRoot: '/tmp/org-shared.worktrees',
+            onCreate: 'echo wildcard',
+          },
+        },
+        worktree: {
+          parentDir: '/tmp/legacy-fallback.worktrees',
+          onCreate: 'echo legacy-fallback',
+        },
+      } as unknown,
+      currentVersion: 1,
+      migrations,
+      parse: (value: unknown) => Parse(PiWorktreeConfigSchema, value),
+    });
+
+    expect(result.status).toBe('migrated');
+    expect(result.config).toEqual({
+      worktrees: {
+        'github.com/org/*': {
+          worktreeRoot: '/tmp/org-shared.worktrees',
+          onCreate: 'echo wildcard',
+        },
+        '**': {
+          worktreeRoot: '/tmp/legacy-fallback.worktrees',
+          onCreate: 'echo legacy-fallback',
+        },
+      },
+    });
   });
 
   it('keeps migration behavior policy-driven through framework validation', async () => {
-    const migrations = [migration01, migration02];
+    const migrations = [migration01, migration02, migration03];
 
     const result = await runMigrations({
       config: {
         parentDir: '/tmp/legacy.worktrees',
         onCreate: ['cd {cwd}', 'git status'],
-      },
+      } as unknown,
       currentVersion: 0,
       migrations,
       parse: (value: unknown) => Parse(PiWorktreeConfigSchema, value),
@@ -104,7 +144,7 @@ describe('config migration set', () => {
     expect(result.config).toEqual({
       worktrees: {
         '**': {
-          parentDir: '/tmp/legacy.worktrees',
+          worktreeRoot: '/tmp/legacy.worktrees',
           onCreate: ['cd {cwd}', 'git status'],
         },
       },

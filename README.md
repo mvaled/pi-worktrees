@@ -66,7 +66,7 @@ In Pi:
 |---|---|
 | `/worktree init` | Interactive setup for extension settings |
 | `/worktree settings` | Show all current settings |
-| `/worktree settings <key>` | Get one setting (`parentDir`, `onCreate`) |
+| `/worktree settings <key>` | Get one setting (`worktreeRoot`, `onCreate`) |
 | `/worktree settings <key> <value>` | Set one setting |
 | `/worktree create <feature-name>` | Create a new worktree + branch `feature/<feature-name>` |
 | `/worktree list` | List all worktrees (`/worktree ls` alias) |
@@ -86,17 +86,17 @@ Settings live in `~/.pi/agent/pi-worktrees-settings.json`.
 {
   "worktrees": {
     "github.com/org/repo": {
-      "parentDir": "~/work/org/repo.worktrees",
+      "worktreeRoot": "~/work/org/repo.worktrees",
       "onCreate": ["mise install", "bun install"]
     },
     "github.com/org/*": {
-      "parentDir": "~/work/org/shared.worktrees",
+      "worktreeRoot": "~/work/org/shared.worktrees",
       "onCreate": "mise setup"
     }
   },
   "matchingStrategy": "fail-on-tie",
   "worktree": {
-    "parentDir": "~/.local/share/worktrees/{{project}}",
+    "worktreeRoot": "~/.local/share/worktrees/{{project}}",
     "onCreate": "mise setup"
   }
 }
@@ -125,16 +125,18 @@ For the current repository, settings are resolved in this order:
 
 When an array is used, commands run sequentially and stop on first failure.
 
-### `parentDir`
+### `worktreeRoot`
 
 Where new worktrees are created.
 
-- **Default**: `../<project>.worktrees/` (relative to your main worktree)
+- **Default**: `{{mainWorktree}}.worktrees`
 - Supports template variables
 
+> Backward compatibility: `parentDir` is still accepted as a deprecated alias for `worktreeRoot`.
+> The extension will migrate existing `parentDir` values to `worktreeRoot` automatically.
 ### Template variables
 
-Available in `parentDir` and `onCreate` values:
+Available in `worktreeRoot` and `onCreate` values:
 
 - `{{path}}` → created worktree path
 - `{{name}}` → feature/worktree name
@@ -149,7 +151,7 @@ Legacy single-worktree config remains supported and is migrated through the shar
 ```json
 {
   "worktree": {
-    "parentDir": "...",
+    "worktreeRoot": "...",
     "onCreate": "..."
   }
 }

@@ -23,8 +23,10 @@ export function createTemplatePreviewComponent(
   theme: TemplatePreviewTheme,
   done: () => void
 ): {
+  // eslint-disable-next-line no-unused-vars
   render: (width: number) => string[];
   invalidate: () => void;
+  // eslint-disable-next-line no-unused-vars
   handleInput: (data: string) => void;
 } {
   const lines = [

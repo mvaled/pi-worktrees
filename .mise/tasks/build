@@ -6,7 +6,7 @@
 
 rm -rf dist
 
-bun build ./src/index.ts --outdir dist --target bun --format esm --packages external \
+bun build ./src/index.ts --outdir dist --target bun --packages external \
 	--external '@mariozechner/pi-coding-agent' \
 	--external '@mariozechner/pi-tui' \
 	--external '@mariozechner/pi-ai'

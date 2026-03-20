@@ -15,8 +15,5 @@ export interface CommandDeps {
   configService: PiWorktreeConfigService;
 }
 
-export type CmdHandler = (
-  args: string,
-  ctx: ExtensionCommandContext,
-  deps: CommandDeps
-) => Promise<void>;
+// eslint-disable-next-line no-unused-vars
+export type CmdHandler = (...args: [string, ExtensionCommandContext, CommandDeps]) => Promise<void>;

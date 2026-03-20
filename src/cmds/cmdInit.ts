@@ -1,6 +1,6 @@
 import type { ExtensionCommandContext } from '@mariozechner/pi-coding-agent';
 import type { CommandDeps } from '../types.ts';
-import { WorktreeSettingsConfig } from '../services/config/schema.ts';
+import { WorktreeSettingsConfig, getConfiguredWorktreeRoot } from '../services/config/schema.ts';
 
 export async function cmdInit(
   _args: string,
@@ -13,13 +13,14 @@ export async function cmdInit(
   }
 
   const currentSettings = deps.settings;
+  const currentWorktreeRoot = getConfiguredWorktreeRoot(currentSettings);
 
   ctx.ui.notify('Worktree Extension Setup\n━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
 
-  if (currentSettings.parentDir || currentSettings.onCreate) {
+  if (currentWorktreeRoot || currentSettings.onCreate) {
     const current = [
       'Current settings:',
-      currentSettings.parentDir ? `  parentDir: ${currentSettings.parentDir}` : null,
+      currentWorktreeRoot ? `  worktreeRoot: ${currentWorktreeRoot}` : null,
       currentSettings.onCreate ? `  onCreate: ${currentSettings.onCreate}` : null,
     ]
       .filter(Boolean)
@@ -27,7 +28,7 @@ export async function cmdInit(
     ctx.ui.notify(current, 'info');
   }
 
-  const PARENT_DIR_DEFAULT = 'Default (../{{project}}.worktrees/)';
+  const PARENT_DIR_DEFAULT = 'Default ({{mainWorktree}}.worktrees)';
   const PARENT_DIR_GLOBAL = 'Global (~/.local/share/worktrees/{{project}})';
   const PARENT_DIR_CUSTOM = 'Custom path...';
   const PARENT_DIR_KEEP = 'Keep current';
@@ -36,7 +37,7 @@ export async function cmdInit(
     PARENT_DIR_DEFAULT,
     PARENT_DIR_GLOBAL,
     PARENT_DIR_CUSTOM,
-    currentSettings.parentDir ? PARENT_DIR_KEEP : null,
+    currentWorktreeRoot ? PARENT_DIR_KEEP : null,
   ].filter(Boolean) as string[];
 
   const parentDirChoice = await ctx.ui.select(
@@ -49,16 +50,16 @@ export async function cmdInit(
     return;
   }
 
-  let parentDir: string | undefined;
+  let worktreeRoot: string | undefined;
 
   if (parentDirChoice === PARENT_DIR_DEFAULT) {
-    parentDir = undefined;
+    worktreeRoot = undefined;
   } else if (parentDirChoice === PARENT_DIR_GLOBAL) {
-    parentDir = '~/.local/share/worktrees/{{project}}';
+    worktreeRoot = '~/.local/share/worktrees/{{project}}';
   } else if (parentDirChoice === PARENT_DIR_CUSTOM) {
     const customPath = await ctx.ui.input(
       'Enter custom path (supports {{project}}, {{name}}):',
-      currentSettings.parentDir || '../{{project}}.worktrees'
+      currentWorktreeRoot || '{{mainWorktree}}.worktrees'
     );
 
     if (customPath === undefined) {
@@ -66,9 +67,9 @@ export async function cmdInit(
       return;
     }
 
-    parentDir = customPath || undefined;
+    worktreeRoot = customPath || undefined;
   } else if (parentDirChoice === PARENT_DIR_KEEP) {
-    parentDir = currentSettings.parentDir;
+    worktreeRoot = currentWorktreeRoot;
   }
 
   const onCreateDefault = Array.isArray(currentSettings.onCreate)
@@ -86,8 +87,8 @@ export async function cmdInit(
   }
 
   const newSettings: WorktreeSettingsConfig = {};
-  if (parentDir) {
-    newSettings.parentDir = parentDir;
+  if (worktreeRoot) {
+    newSettings.worktreeRoot = worktreeRoot;
   }
 
   if (onCreate && onCreate.trim()) {
@@ -97,7 +98,9 @@ export async function cmdInit(
   const preview = [
     'Settings to save:',
     '',
-    newSettings.parentDir ? `  parentDir: "${newSettings.parentDir}"` : '  parentDir: (default)',
+    newSettings.worktreeRoot
+      ? `  worktreeRoot: "${newSettings.worktreeRoot}"`
+      : '  worktreeRoot: (default)',
     newSettings.onCreate ? `  onCreate: "${newSettings.onCreate}"` : '  onCreate: (none)',
     '',
   ].join('\n');

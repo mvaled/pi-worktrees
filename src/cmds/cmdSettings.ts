@@ -1,7 +1,8 @@
 import type { ExtensionCommandContext } from '@mariozechner/pi-coding-agent';
 import type { CommandDeps } from '../types.ts';
+import { getConfiguredWorktreeRoot } from '../services/config/schema.ts';
 
-const VALID_SETTING_KEYS = ['parentDir', 'onCreate'] as const;
+const VALID_SETTING_KEYS = ['worktreeRoot', 'parentDir', 'onCreate'] as const;
 type SettingKey = (typeof VALID_SETTING_KEYS)[number];
 
 export async function cmdSettings(
@@ -23,8 +24,8 @@ export async function cmdSettings(
       'Worktree Settings:',
       '━━━━━━━━━━━━━━━━━━',
       '',
-      `parentDir: ${currentSettings.parentDir || '(default: ../<project>.worktrees/)'}`,
-      `onCreate:  ${
+      `worktreeRoot: ${getConfiguredWorktreeRoot(currentSettings) || '(default: {{mainWorktree}}.worktrees)'}`,
+      `onCreate:     ${
         Array.isArray(currentSettings.onCreate)
           ? currentSettings.onCreate.join(' && ')
           : (currentSettings.onCreate ?? '(none)')
@@ -43,36 +44,53 @@ export async function cmdSettings(
     return;
   }
 
+  if (key === 'parentDir') {
+    ctx.ui.notify('`parentDir` is deprecated. Use `worktreeRoot`.', 'warning');
+  }
+
+  const resolvedKey: 'worktreeRoot' | 'onCreate' = key === 'parentDir' ? 'worktreeRoot' : key;
+
   if (!value && parts.length === 1) {
-    const currentValue = currentSettings[key];
-    if (currentValue) {
-      const displayValue = Array.isArray(currentValue) ? currentValue.join(' && ') : currentValue;
-      ctx.ui.notify(`${key}: ${displayValue}`, 'info');
+    if (resolvedKey === 'worktreeRoot') {
+      const currentValue = getConfiguredWorktreeRoot(currentSettings);
+      if (currentValue) {
+        ctx.ui.notify('worktreeRoot: ' + currentValue, 'info');
+        return;
+      }
+
+      ctx.ui.notify('worktreeRoot: (default: {{mainWorktree}}.worktrees)', 'info');
       return;
     }
 
-    const defaults: Record<SettingKey, string> = {
-      parentDir: '(default: ../<project>.worktrees/)',
+    const currentValue = currentSettings[resolvedKey];
+    if (currentValue) {
+      const displayValue = Array.isArray(currentValue) ? currentValue.join(' && ') : currentValue;
+      ctx.ui.notify(`${resolvedKey}: ${displayValue}`, 'info');
+      return;
+    }
+
+    const defaults: Record<'worktreeRoot' | 'onCreate', string> = {
+      worktreeRoot: '(default: {{mainWorktree}}.worktrees)',
       onCreate: '(none)',
     };
-    ctx.ui.notify(`${key}: ${defaults[key]}`, 'info');
+    ctx.ui.notify(`${resolvedKey}: ${defaults[resolvedKey]}`, 'info');
     return;
   }
 
   const newSettings = { ...currentSettings };
 
   if (value === '' || value === '""' || value === 'null' || value === 'clear') {
-    delete newSettings[key];
-    ctx.ui.notify(`✓ Cleared ${key}`, 'info');
+    delete newSettings[resolvedKey];
+    delete newSettings.parentDir;
+    ctx.ui.notify(`✓ Cleared ${resolvedKey}`, 'info');
   } else {
-    newSettings[key] = value;
-    ctx.ui.notify(`✓ Set ${key} = "${value}"`, 'info');
+    newSettings[resolvedKey] = value;
+    if (resolvedKey === 'worktreeRoot') {
+      delete newSettings.parentDir;
+    }
+    ctx.ui.notify(`✓ Set ${resolvedKey} = "${value}"`, 'info');
   }
 
-  //TODO: this used to assume settings was about a single repo/worktree.
-  // but it now needs to think about:
-  // - are we saving entire settings?
-  // - are we saving settings for a repo? new, existing ?
   try {
     // await deps.configService.save(newSettings);
   } catch (err) {

@@ -15,6 +15,9 @@ type ConfigCurrent = WorktreeSettingsConfig & {
 function createCurrentResolver(repo: string, repos: Map<string, WorktreeSettingsConfig>) {
   return () => {
     const result = gitService.matchRepo(repo, repos, 'fail-on-tie');
+    if (result.type === 'tie-conflict') {
+      throw new Error(result.message);
+    }
     const settings = result.settings;
 
     return {
@@ -69,7 +72,8 @@ describe('cmdCreate resolution integration', () => {
       '/main/repo'
     );
 
-    expect(notify).toHaveBeenCalledWith('Running: echo exact', 'info');
+    const notifiedText = notify.mock.calls.map(([msg]) => String(msg)).join('\n');
+    expect(notifiedText).toContain('🚧 [01] echo exact');
   });
 
   it('uses fallback pattern settings when no specific repo pattern matches', async () => {
@@ -88,6 +92,7 @@ describe('cmdCreate resolution integration', () => {
       '/main/repo'
     );
 
-    expect(notify).toHaveBeenCalledWith('Running: echo fallback', 'info');
+    const notifiedText = notify.mock.calls.map(([msg]) => String(msg)).join('\n');
+    expect(notifiedText).toContain('🚧 [01] echo fallback');
   });
 });

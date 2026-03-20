@@ -8,10 +8,16 @@ import {
   isGitRepo,
 } from '../services/git.ts';
 import { expandTemplate } from '../services/templates.ts';
+import { getConfiguredWorktreeRoot } from '../services/config/schema.ts';
 import type { CommandDeps } from '../types.ts';
-import { createTemplatePreviewComponent, type TemplateToken } from '../ui/templatePreview.ts';
 
 const SAMPLE_FEATURE_NAME = 'sample-feature';
+
+interface TemplateToken {
+  token: string;
+  value: string;
+  source: string;
+}
 
 function buildPlainLines(
   cwd: string,
@@ -95,31 +101,14 @@ export async function cmdTemplates(
     },
   ];
 
-  const parentDirTemplate = deps.settings.parentDir ?? '../{{project}}.worktrees';
+  const parentDirTemplate =
+    getConfiguredWorktreeRoot(deps.settings) ?? '{{mainWorktree}}.worktrees';
   const parentDirPreview = expandTemplate(parentDirTemplate, {
     ...previewCtx,
     path: '',
     name: '',
     branch: '',
   });
-
-  if (ctx.hasUI) {
-    await ctx.ui.custom<void>((_tui, theme, _kb, done) =>
-      createTemplatePreviewComponent(
-        {
-          cwd: ctx.cwd,
-          currentBranch,
-          parentDirTemplate,
-          parentDirPreview,
-          sampleFeatureName: SAMPLE_FEATURE_NAME,
-          tokens,
-        },
-        theme,
-        () => done(undefined)
-      )
-    );
-    return;
-  }
 
   const lines = buildPlainLines(
     ctx.cwd,

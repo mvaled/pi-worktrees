@@ -29,7 +29,7 @@ function createSpawnResultQueue(results: SpawnResult[]) {
     child.stdout = new EventEmitter();
     child.stderr = new EventEmitter();
 
-    queueMicrotask(() => {
+    Promise.resolve().then(() => {
       if (next.stdout) {
         child.stdout.emit('data', Buffer.from(next.stdout));
       }
@@ -60,7 +60,10 @@ describe('runOnCreateHook execution integration', () => {
   });
 
   it('runs onCreate commands in order', async () => {
-    createSpawnResultQueue([{ code: 0, stdout: 'first-ok' }, { code: 0, stdout: 'second-ok' }]);
+    createSpawnResultQueue([
+      { code: 0, stdout: 'first-ok' },
+      { code: 0, stdout: 'second-ok' },
+    ]);
 
     const settings: WorktreeSettingsConfig = {
       onCreate: ['echo {{name}}', 'echo {{branch}}'],
@@ -71,8 +74,15 @@ describe('runOnCreateHook execution integration', () => {
     expect(result.success).toBe(true);
     expect(result.executed).toEqual(['echo feature-x', 'echo feature/feature-x']);
     expect(spawnMock).toHaveBeenCalledTimes(2);
-    expect(notify).toHaveBeenCalledWith('Running: echo feature-x', 'info');
-    expect(notify).toHaveBeenCalledWith('Running: echo feature/feature-x', 'info');
+
+    const notifiedText = notify.mock.calls.map(([msg]) => String(msg)).join('\n');
+    expect(notifiedText).toContain('onCreate steps:');
+    expect(notifiedText).toContain('○ [01] echo feature-x');
+    expect(notifiedText).toContain('🚧 [01] echo feature-x');
+    expect(notifiedText).toContain('✅ [01] echo feature-x');
+    expect(notifiedText).toContain('○ [02] echo feature/feature-x');
+    expect(notifiedText).toContain('🚧 [02] echo feature/feature-x');
+    expect(notifiedText).toContain('✅ [02] echo feature/feature-x');
   });
 
   it('stops execution at first command failure', async () => {
@@ -96,5 +106,11 @@ describe('runOnCreateHook execution integration', () => {
       error: 'second failed hard',
     });
     expect(spawnMock).toHaveBeenCalledTimes(2);
+
+    const notifiedText = notify.mock.calls.map(([msg]) => String(msg)).join('\n');
+    expect(notifiedText).toContain('❌ [02] echo second');
+    expect(notifiedText).toContain('onCreate failed (exit 12): second failed hard');
+    expect(notifiedText).not.toContain('🚧 [03] echo third');
+    expect(notifiedText).not.toContain('✅ [03] echo third');
   });
 });

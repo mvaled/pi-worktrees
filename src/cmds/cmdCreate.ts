@@ -4,6 +4,20 @@ import { ensureExcluded, git, isGitRepo, listWorktrees } from '../services/git.t
 import { runOnCreateHook } from './shared.ts';
 import type { CommandDeps, WorktreeCreatedContext } from '../types.ts';
 
+function sanitizePathPart(value: string): string {
+  return value.replace(/[^a-zA-Z0-9._-]/g, '-');
+}
+
+function resolveLogfilePath(
+  template: string,
+  values: Record<'sessionId' | 'name' | 'timestamp', string>
+): string {
+  return template
+    .replace(/\{\{sessionId\}\}|\{sessionId\}/g, values.sessionId)
+    .replace(/\{\{name\}\}|\{name\}/g, values.name)
+    .replace(/\{\{timestamp\}\}|\{timestamp\}/g, values.timestamp);
+}
+
 // TODO: this needs to be rethought so that we use configService.current(ctx.cwd)
 export async function cmdCreate(
   args: string,
@@ -56,7 +70,14 @@ export async function cmdCreate(
     ...current,
   };
 
-  await runOnCreateHook(createdCtx, current, ctx.ui.notify.bind(ctx.ui));
+  const sessionId = sanitizePathPart(ctx.sessionManager.getSessionId() || 'session');
+  const safeName = sanitizePathPart(featureName);
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const logPath = resolveLogfilePath(current.logfile, {
+    sessionId,
+    name: safeName,
+    timestamp,
+  });
 
-  ctx.ui.notify(`✓ Worktree created!\n  Path: ${worktreePath}\n  Branch: ${branchName}`, 'info');
+  await runOnCreateHook(createdCtx, current, ctx.ui.notify.bind(ctx.ui), { logPath });
 }

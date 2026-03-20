@@ -5,11 +5,7 @@
  * Codifies the patterns from the using-git-worktrees skill into an interactive command.
  */
 
-import type {
-  ExtensionFactory,
-  ExtensionAPI,
-  ExtensionContext,
-} from '@mariozechner/pi-coding-agent';
+import type { ExtensionFactory, ExtensionContext } from '@mariozechner/pi-coding-agent';
 import type { CmdHandler } from './types.ts';
 import { cmdCd } from './cmds/cmdCd.ts';
 import { cmdCreate } from './cmds/cmdCreate.ts';
@@ -40,17 +36,18 @@ Configuration (~/.pi/agent/pi-worktrees-settings.json):
   {
     "worktrees": {
       "github.com/org/repo": {
-        "parentDir": "~/work/org",
+        "worktreeRoot": "~/work/org",
         "onCreate": ["mise install", "bun install"]
       },
       "github.com/org/*": {
-        "parentDir": "~/work/org-other",
+        "worktreeRoot": "~/work/org-other",
         "onCreate": "make setup"
       }
     },
     "matchingStrategy": "fail-on-tie",
+    "logfile": "/tmp/pi-worktree-{sessionId}-{name}.log",
     "worktree": {
-      "parentDir": "~/.worktrees/{{project}}",
+      "worktreeRoot": "~/.worktrees/{{project}}",
       "onCreate": "mise setup"
     }
   }
@@ -58,7 +55,9 @@ Configuration (~/.pi/agent/pi-worktrees-settings.json):
 Pattern matching: exact URL > most-specific glob > fallback (worktree)
 Matching strategies: fail-on-tie | first-wins | last-wins
 
+Config note: parentDir is deprecated and supported as an alias for worktreeRoot.
 Template vars: {{path}}, {{name}}, {{branch}}, {{project}}, {{mainWorktree}}
+Logfile vars: {sessionId} / {{sessionId}}, {name} / {{name}}, {timestamp} / {{timestamp}}
 `.trim();
 
 const commands: Record<string, CmdHandler> = {
@@ -118,9 +117,9 @@ const PiWorktreeExtension: ExtensionFactory = async function (pi) {
       }
 
       try {
-      await configService.reload();
+        await configService.reload();
         const settings = configService.current(ctx);
-      await command(rest.join(' '), ctx, {
+        await command(rest.join(' '), ctx, {
           settings,
           configService,
         });

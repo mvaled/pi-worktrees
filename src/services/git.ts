@@ -2,7 +2,11 @@ import { execSync } from 'child_process';
 import { appendFileSync, existsSync, readFileSync, statSync } from 'fs';
 import { basename, dirname, join, relative, resolve } from 'path';
 import { expandTemplate } from './templates.ts';
-import { MatchingStrategy, WorktreeSettingsConfig } from './config/schema.ts';
+import {
+  getConfiguredWorktreeRoot,
+  MatchingStrategy,
+  WorktreeSettingsConfig,
+} from './config/schema.ts';
 import { DefaultWorktreeSettings, PiWorktreeConfiguredWorktreeMap } from './config/config.ts';
 import { globMatch } from './glob.ts';
 
@@ -173,8 +177,9 @@ export function getWorktreeParentDir(
     throw new Error(worktree.message);
   }
 
-  if (worktree.settings.parentDir) {
-    return expandTemplate(worktree.settings.parentDir, {
+  const configuredRoot = getConfiguredWorktreeRoot(worktree.settings);
+  if (configuredRoot) {
+    return expandTemplate(configuredRoot, {
       path: '',
       name: '',
       branch: '',
@@ -183,7 +188,7 @@ export function getWorktreeParentDir(
     });
   }
 
-  return join(dirname(mainWorktree), `${project}.worktrees`);
+  return `${mainWorktree}.worktrees`;
 }
 
 /**

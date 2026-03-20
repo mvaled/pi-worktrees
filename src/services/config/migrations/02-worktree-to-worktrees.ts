@@ -9,6 +9,10 @@ type LegacyWorktreeSettings = {
   onCreate?: unknown;
 };
 
+type LegacyTopLevelSettings = {
+  logfile?: unknown;
+};
+
 function toRecord(value: unknown): AnyRecord {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     return {};
@@ -37,29 +41,35 @@ export const migration: Migration = {
   up(config: unknown): AnyRecord {
     const record = toRecord(config);
     const next = { ...record };
+    const topLevel = toRecord(record) as LegacyTopLevelSettings;
 
     const worktree = sanitizeLegacyWorktreeSettings(record.worktree);
     const hasLegacyWorktreeSettings = Object.keys(worktree).length > 0;
-
-    const existingWorktrees = toRecord(record.worktrees);
-    const hasWorktrees = Object.keys(existingWorktrees).length > 0;
 
     if (!hasLegacyWorktreeSettings) {
       return next;
     }
 
-    if (!hasWorktrees) {
-      next.worktrees = {
-        [FALLBACK_WORKTREE_PATTERN]: worktree,
-      };
-    }
+    const existingWorktrees = toRecord(record.worktrees);
+    const mergedWorktrees = { ...existingWorktrees };
+    const existingFallback = toRecord(mergedWorktrees[FALLBACK_WORKTREE_PATTERN]);
 
+    mergedWorktrees[FALLBACK_WORKTREE_PATTERN] = {
+      ...existingFallback,
+      ...worktree,
+    };
+
+    next.worktrees = mergedWorktrees;
+    if (topLevel.logfile !== undefined) {
+      next.logfile = topLevel.logfile;
+    }
     delete next.worktree;
     return next;
   },
   down(config: unknown): AnyRecord {
     const record = toRecord(config);
     const next = { ...record };
+    const topLevel = toRecord(record) as LegacyTopLevelSettings;
 
     const worktrees = toRecord(record.worktrees);
     const fallbackSettings = sanitizeLegacyWorktreeSettings(worktrees[FALLBACK_WORKTREE_PATTERN]);
@@ -75,6 +85,10 @@ export const migration: Migration = {
       } else {
         delete next.worktrees;
       }
+    }
+
+    if (topLevel.logfile !== undefined) {
+      next.logfile = topLevel.logfile;
     }
 
     return next;
