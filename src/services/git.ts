@@ -7,7 +7,7 @@ import {
   MatchingStrategy,
   WorktreeSettingsConfig,
 } from './config/schema.ts';
-import { DefaultWorktreeSettings, PiWorktreeConfiguredWorktreeMap } from './config/config.ts';
+import { PiWorktreeConfiguredWorktreeMap } from './config/config.ts';
 import { globMatch } from './glob.ts';
 
 export interface WorktreeInfo {
@@ -167,11 +167,8 @@ export function getWorktreeParentDir(
   const mainWorktree = getMainWorktreePath(cwd);
   const repo = getRemoteUrl(cwd);
 
-  if (!repo) {
-    throw new Error('Not a git repo');
-  }
-
-  const worktree = matchRepo(repo, repos, matchStrategy);
+  const repoReference = repo && repo.trim().length > 0 ? repo : '**';
+  const worktree = matchRepo(repoReference, repos, matchStrategy);
 
   if (worktree.type === 'tie-conflict') {
     throw new Error(worktree.message);
@@ -249,12 +246,6 @@ export type Result =
   | ({
       type: 'exact';
     } & MatchResult)
-  | ({
-      type: 'no-match';
-    } & MatchResult)
-  | ({
-      type: 'default';
-    } & MatchResult)
   | ({ type: 'tie-conflict' } & TieConflictError)
   | ({ type: 'first-wins' } & MatchResult)
   | ({ type: 'last-wins' } & MatchResult);
@@ -330,15 +321,8 @@ export function matchRepo(
   repos: PiWorktreeConfiguredWorktreeMap,
   matchStrategy?: MatchingStrategy
 ): Result {
-  if (!url || repos.size === 0) {
-    return {
-      settings: DefaultWorktreeSettings,
-      matchedPattern: null,
-      type: 'default',
-    };
-  }
-
-  const normalizedUrl = normalizeRepoReference(url);
+  const repoReference = url && url.trim().length > 0 ? url : '**';
+  const normalizedUrl = normalizeRepoReference(repoReference);
   const scoredMatches: ScoredMatch[] = [];
 
   for (const [pattern, settings] of repos.entries()) {
@@ -362,11 +346,7 @@ export function matchRepo(
   }
 
   if (scoredMatches.length === 0) {
-    return {
-      settings: DefaultWorktreeSettings,
-      matchedPattern: null,
-      type: 'no-match',
-    };
+    throw new Error(`No matching worktree settings for repo: ${normalizedUrl}`);
   }
 
   scoredMatches.sort((left, right) => right.specificity - left.specificity);
