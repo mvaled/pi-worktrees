@@ -1,12 +1,12 @@
 # Project Summary
 
 ## Current State
-- Status: in-progress
-- Current epic: epic-a7c9d4f2-multi-worktree-settings
-- Active phase: validation and hardening
-- Next milestone: execute newly-created Phase 2 task files and collect test evidence to move in-progress stories to `test_coverage: full`.
+- Status: planning
+- Current epic: epic-c6d8a1f4-expose-subcommands-as-tools
+- Active phase: phase-1-discovery-and-interface-design (planned)
+- Next milestone: define stories and acceptance criteria for subcommand-to-tool exposure, then schedule initial implementation tasks.
 
 ## Notes
-- Completed epic/story review and linked associated clarification research.
-- Added concrete task files for schema-loader integration tests, matcher tie conflict behavior, strategy enum, migration set work, and cross-suite integration coverage.
-- Updated epic phase task list, story task links, todo links, and team assignment to current session id.
+- New epic created to expose subcommands as tools.
+- Previous epic `epic-a7c9d4f2-multi-worktree-settings` remains in memory but is no longer the active planning focus.
+- Awaiting story-definition pass to convert this epic into executable task breakdown.
