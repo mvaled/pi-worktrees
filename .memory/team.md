@@ -1,13 +1,12 @@
 # Team
 
 ## Active Work
-- Session: yZ1oQFmhO0whbPeq2sTGhc1C
-- Epic: epic-a7c9d4f2-multi-worktree-settings
-- Phase: validation-and-hardening
-- Owner: yZ1oQFmhO0whbPeq2sTGhc1C
+- Session: session-20260322-111654
+- Epic: epic-c6d8a1f4-expose-subcommands-as-tools
+- Phase: discovery-and-interface-design
+- Owner: session-20260322-111654
 
 ## Notes
-- Loaded superpowers + miniproject workflow and reviewed epic/stories.
-- Created Phase 2 task artifacts and linked them from epic/stories/todo.
-- Next execution focus: complete task files in order and gather story-level test evidence for completion gates.
-- Loaded miniproject workflow conventions and created a minimal one-task epic for fallback normalization.
+- Loaded superpowers + miniproject workflows and created a new epic artifact.
+- Updated project summary to make the new epic the active planning focus.
+- Next action: story definition for this epic, then task breakdown.
