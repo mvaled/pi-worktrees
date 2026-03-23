@@ -2,8 +2,8 @@
 id: e1b5c7f9
 title: document-worktrees-tool-usage
 created_at: 2026-03-22T12:37:18+10:30
-updated_at: 2026-03-22T12:37:18+10:30
-status: proposed
+updated_at: 2026-03-23T18:33:58+10:30
+status: cancelled
 epic_id: c6d8a1f4
 priority: medium
 story_points: 2

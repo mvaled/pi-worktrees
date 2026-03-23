@@ -2,8 +2,8 @@
 id: f3b9c6a2
 title: define-worktrees-dispatch-error-contract
 created_at: 2026-03-22T12:41:34+10:30
-updated_at: 2026-03-22T12:41:34+10:30
-status: todo
+updated_at: 2026-03-23T18:33:58+10:30
+status: cancelled
 epic_id: c6d8a1f4
 phase_id: phase-1-discovery-and-interface-design
 story_id: 91ab4c2e

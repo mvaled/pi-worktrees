@@ -9,4 +9,4 @@
 
 ## Parked
 
-- [ ] [epic-c6d8a1f4-expose-subcommands-as-tools](./epic-c6d8a1f4-expose-subcommands-as-tools.md) — parked
+- [ ] [epic-c6d8a1f4-expose-subcommands-as-tools](./epic-c6d8a1f4-expose-subcommands-as-tools.md) — cancelled

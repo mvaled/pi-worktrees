@@ -2,8 +2,8 @@
 id: 91ab4c2e
 title: define-worktrees-tool-interface-and-dispatch
 created_at: 2026-03-22T12:37:18+10:30
-updated_at: 2026-03-22T12:41:34+10:30
-status: in-progress
+updated_at: 2026-03-23T18:33:58+10:30
+status: cancelled
 epic_id: c6d8a1f4
 priority: high
 story_points: 3

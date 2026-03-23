@@ -13,4 +13,4 @@
   - separation audit of pi coding agent dependencies
   - CLI framework research for Bun/Node.js
 - Research artifact completed: [research-b7d9c4e1-typescript-cli-framework-options](./research-b7d9c4e1-typescript-cli-framework-options.md)
-- Previous active epic (`epic-c6d8a1f4-expose-subcommands-as-tools`) is now parked.
+- Previous active epic (`epic-c6d8a1f4-expose-subcommands-as-tools`) is now cancelled per user request.
